@@ -1,14 +1,30 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { SwaggerModule } from '@nestjs/swagger';
 import { DocumentBuilder } from '@nestjs/swagger';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { ConfigService } from '@nestjs/config';
+import { GlobalExceptionFilter } from './common/fitlers/global-exception.filter';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { User } from './modules/user/entities/user.entity';
+import type { Repository } from 'typeorm';
+import { seedAdminIfMissing } from './scripts/seed-admin';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const configService = app.get(ConfigService);
+  const port = Number(configService.get<string>('PORT') ?? 3000);
+  const clientUrl = configService.get<string>('CLIENT_URL');
+  const shouldSeedAdmin =
+    configService.get<string>('ADMIN_SEED_ON_BOOT') !== 'false';
 
   app.setGlobalPrefix('api');
+
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
+  app.useGlobalInterceptors(new TransformInterceptor(app.get(Reflector)));
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -20,7 +36,7 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: process.env.CLIENT_URL || [
+    origin: clientUrl || [
       'http://localhost:5173',
       'http://192.168.0.2:5173',
       'http://172.31.64.1:5173',
@@ -30,6 +46,11 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
+  if (shouldSeedAdmin) {
+    const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
+    await seedAdminIfMissing(userRepository);
+  }
+
   const config = new DocumentBuilder()
     .setTitle('Sport Field Booking API')
     .setDescription('API for Sport Field Booking')
@@ -37,10 +58,11 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(port);
 
-  console.log('✅ server is logging on port', process.env.PORT ?? 3000);
+  console.log('✅ Server is logging on port', port);
+  console.log('📃 API docs url:', `http://localhost:${port}/api/docs`);
 }
 bootstrap();

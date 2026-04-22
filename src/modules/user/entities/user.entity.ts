@@ -27,8 +27,8 @@ export class User {
   @Column({ type: 'varchar', length: 255, unique: true })
   email!: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  full_name!: string;
+  @Column({ name: 'full_name', type: 'varchar', length: 255 })
+  fullName!: string;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   phone?: string | null;

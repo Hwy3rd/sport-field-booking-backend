@@ -7,6 +7,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
@@ -15,7 +16,10 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly configService: ConfigService,
+  ) {}
 
   @Post('login')
   @ApiBearerAuth()
@@ -32,6 +36,7 @@ export class AuthController {
   @Post('logout')
   @ApiBearerAuth()
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
     const refreshToken = req.cookies?.refreshToken;
 
     if (refreshToken) {
@@ -39,8 +44,8 @@ export class AuthController {
     }
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
     });
 
     return;
@@ -55,6 +60,6 @@ export class AuthController {
       throw new UnauthorizedException('Refresh token is missing from cookies');
     }
 
-    return await this.authService.refreshToken(oldRefreshToken, req.user);
+    // return await this.authService.refreshToken(oldRefreshToken);
   }
 }
