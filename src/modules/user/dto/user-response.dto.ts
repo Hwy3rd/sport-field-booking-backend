@@ -5,7 +5,8 @@ import {
   USER_ROLE_VALUES,
   USER_STATUS_VALUES,
 } from 'src/libs/constants/user.constant';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
+import { FilteredDataResponseDto } from 'src/libs/dtos/filtered-data-response.dto';
 
 export class UserResponseDto extends BaseUserDto {
   @Expose()
@@ -20,7 +21,10 @@ export class UserResponseDto extends BaseUserDto {
   role!: UserRole;
 
   @Expose()
-  @ApiProperty({ description: 'The status of the user', enum: USER_STATUS_VALUES })
+  @ApiProperty({
+    description: 'The status of the user',
+    enum: USER_STATUS_VALUES,
+  })
   status!: UserStatus;
 
   @Expose()
@@ -36,4 +40,21 @@ export class UserResponseDto extends BaseUserDto {
     example: '2026-04-22T10:00:00.000Z',
   })
   updatedAt!: Date;
+}
+
+export class FilteredUserResponseDto extends FilteredDataResponseDto {
+  @Expose()
+  @Type(() => UserResponseDto)
+  @ApiProperty({
+    description: 'The items of the filtered data',
+    example: [
+      {
+        id: '123abc',
+        fullName: 'Nguyen Van A',
+        email: 'nguyenvanA@example.com',
+      },
+    ],
+    type: Array<UserResponseDto>,
+  })
+  items!: UserResponseDto[];
 }

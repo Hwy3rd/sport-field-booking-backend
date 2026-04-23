@@ -22,7 +22,7 @@ export async function seedAdminIfMissing(userRepository: Repository<User>) {
     configService.get<string>('ADMIN_EMAIL') ?? 'admin@example.com';
   const adminUsername = configService.get<string>('ADMIN_USERNAME') ?? 'admin';
   const adminPassword =
-    configService.get<string>('ADMIN_PASSWORD') ?? 'admin123456';
+    configService.get<string>('ADMIN_PASSWORD') ?? 'admin123';
   const adminFullName =
     configService.get<string>('ADMIN_FULL_NAME') ?? 'System Admin';
   const adminPhone = configService.get<string>('ADMIN_PHONE') || '0901234567';

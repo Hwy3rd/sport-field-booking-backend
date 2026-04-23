@@ -62,6 +62,7 @@ export class UserService {
     };
   }
 
+  //Admin endpoints logic
   async findAllByFilter(filterBody: FilterBodyDto) {
     this.logger.log(
       `Searching users with pagination current=${filterBody.current}, limit=${filterBody.limit}, filter=${JSON.stringify(filterBody.filter)}`,
@@ -80,7 +81,6 @@ export class UserService {
     return filteredData;
   }
 
-  //Admin endpoints logic
   async adminCreate(createUserDto: AdminCreateUserDto) {
     this.logger.log(`Creating user with email=${createUserDto.email}`);
     const { username, email, password } = createUserDto;
@@ -226,7 +226,7 @@ export class UserService {
       user.password,
     );
     if (!isPasswordValid) {
-      throw new BadRequestException('Invalid old password');
+      throw new BadRequestException('Invalid password');
     }
 
     const newHashedPassword = await bcrypt.hash(

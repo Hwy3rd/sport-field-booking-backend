@@ -34,6 +34,7 @@ export class Session {
   @Column({ name: 'expires_at', type: 'timestamptz' })
   expiresAt!: Date;
 
+  @Index('IDX_sessions_revoked_at')
   @Column({ name: 'revoked_at', type: 'timestamptz', nullable: true })
   revokedAt?: Date | null;
 
