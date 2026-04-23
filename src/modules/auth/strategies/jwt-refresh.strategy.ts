@@ -43,6 +43,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
       username: user.username,
       email: user.email,
       role: user.role,
+      jti: payload.jti,
     };
   }
 }

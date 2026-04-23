@@ -13,6 +13,8 @@ import { AuthService } from './auth.service';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
 import { JwtRefreshGuard } from 'src/common/guards/jwt-refresh.guard';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { REFRESH_TOKEN_MAX_AGE } from 'src/libs/constants/token.constent';
+import type { RefreshAuthUser } from 'src/libs/types/jwt-payload.type';
 
 @Controller('auth')
 export class AuthController {
@@ -23,8 +25,22 @@ export class AuthController {
 
   @Post('login')
   @ApiBearerAuth()
-  async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
+    const { accessToken, refreshToken } =
+      await this.authService.login(loginDto);
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: REFRESH_TOKEN_MAX_AGE,
+    });
+
+    return { accessToken };
   }
 
   @Post('register')
@@ -54,12 +70,32 @@ export class AuthController {
   @Post('refresh-token')
   @ApiBearerAuth()
   @UseGuards(JwtRefreshGuard)
-  async refreshToken(@Req() req: Request) {
+  async refreshToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const isProduction = this.configService.get('NODE_ENV') === 'production';
     const oldRefreshToken = req.cookies?.refreshToken;
     if (!oldRefreshToken) {
       throw new UnauthorizedException('Refresh token is missing from cookies');
     }
+    const authUser = req.user as RefreshAuthUser | undefined;
+    if (!authUser) {
+      throw new UnauthorizedException('Invalid refresh token payload');
+    }
 
-    // return await this.authService.refreshToken(oldRefreshToken);
+    const { accessToken, refreshToken } = await this.authService.refreshToken(
+      oldRefreshToken,
+      authUser,
+    );
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? 'none' : 'lax',
+      maxAge: REFRESH_TOKEN_MAX_AGE,
+    });
+
+    return { accessToken };
   }
 }

@@ -5,17 +5,27 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { AdminCreateUserDto } from 'src/modules/user/dto/create-user.dto';
-import { AdminUpdateUserDto } from 'src/modules/user/dto/update-user.dto';
+import {
+  AdminCreateUserDto,
+  UserRegisterDto,
+} from 'src/modules/user/dto/create-user.dto';
+import {
+  AdminChangePasswordDto,
+  AdminUpdateUserDto,
+  UserChangePasswordDto,
+  UserUpdateDto,
+} from 'src/modules/user/dto/update-user.dto';
 import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
-import { Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import {
   filterQuery,
   FilterQueryOptions,
 } from 'src/libs/helpers/filter-query.helper';
+import { USER_ROLE, USER_STATUS } from 'src/libs/constants/user.constant';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
@@ -25,14 +35,36 @@ export class UserService {
 
   private readonly logger = new Logger(UserService.name);
 
-  async findById(id: string): Promise<User | null> {
+  async findById(id: string) {
     if (!id) return null;
     return this.userRepository.findOne({ where: { id } });
   }
 
+  async findByIdentifier(identifier: string) {
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const isEmail = EMAIL_REGEX.test(identifier);
+    if (isEmail) {
+      return this.userRepository.findOne({ where: { email: identifier } });
+    } else {
+      return this.userRepository.findOne({ where: { username: identifier } });
+    }
+  }
+
+  async checkDuplicateUsernameEmail(username: string, email: string) {
+    const matchedUsers = await this.userRepository.find({
+      where: [{ username }, { email }],
+      select: ['username', 'email'],
+    });
+
+    return {
+      usernameTaken: matchedUsers.some((user) => user.username === username),
+      emailTaken: matchedUsers.some((user) => user.email === email),
+    };
+  }
+
   async findAllByFilter(filterBody: FilterBodyDto) {
     this.logger.log(
-      `Searching users with pagination current=${filterBody.current}, limit=${filterBody.limit}`,
+      `Searching users with pagination current=${filterBody.current}, limit=${filterBody.limit}, filter=${JSON.stringify(filterBody.filter)}`,
     );
 
     const filterOptions: FilterQueryOptions<User> = {
@@ -48,79 +80,162 @@ export class UserService {
     return filteredData;
   }
 
-  create(createUserDto: AdminCreateUserDto) {
+  //Admin endpoints logic
+  async adminCreate(createUserDto: AdminCreateUserDto) {
     this.logger.log(`Creating user with email=${createUserDto.email}`);
-
-    try {
-      // TODO: Replace with repository save logic.
-      return {
-        id: 'mock-user-id',
-        ...createUserDto,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to create user with email=${createUserDto.email}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-      throw new InternalServerErrorException('Failed to create user');
+    const { username, email, password } = createUserDto;
+    const { usernameTaken, emailTaken } =
+      await this.checkDuplicateUsernameEmail(username, email);
+    if (usernameTaken && emailTaken) {
+      throw new BadRequestException('Username and email already exist');
     }
+    if (usernameTaken) {
+      throw new BadRequestException('Username already exists');
+    }
+    if (emailTaken) {
+      throw new BadRequestException('Email already exists');
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = this.userRepository.create({
+      ...createUserDto,
+      username,
+      email,
+      password: hashedPassword,
+    });
+    await this.userRepository.save(user);
+
+    this.logger.log(
+      `User created with username=${username} and email=${email}`,
+    );
+    return user;
   }
 
-  update(id: number, updateUserDto: AdminUpdateUserDto) {
-    if (!Number.isInteger(id) || id <= 0) {
-      throw new BadRequestException('Invalid user id');
-    }
-
-    this.logger.log(`Updating user id=${id}`);
-
-    const existingUser = null;
-    if (!existingUser) {
-      this.logger.warn(`User not found for update id=${id}`);
+  async adminChangePassword(
+    id: string,
+    changePasswordDto: AdminChangePasswordDto,
+  ) {
+    const user = await this.findById(id);
+    if (!user) {
       throw new NotFoundException('User not found');
     }
 
-    try {
-      // TODO: Replace with repository update logic.
-      return {
-        id,
-        ...updateUserDto,
-        updatedAt: new Date(),
-      };
-    } catch (error) {
-      this.logger.error(
-        `Failed to update user id=${id}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-      throw new InternalServerErrorException('Failed to update user');
-    }
+    const newHashedPassword = await bcrypt.hash(
+      changePasswordDto.newPassword,
+      10,
+    );
+
+    user.password = newHashedPassword;
+    await this.userRepository.save(user);
+
+    this.logger.log(`Password changed for user id=${id}`);
+    return;
   }
 
-  remove(id: number) {
-    if (!Number.isInteger(id) || id <= 0) {
-      throw new BadRequestException('Invalid user id');
-    }
-
-    this.logger.log(`Removing user id=${id}`);
-
-    const deleted = false;
-    if (!deleted) {
-      this.logger.warn(`User not found for remove id=${id}`);
+  async adminUpdate(id: string, updateUserDto: AdminUpdateUserDto) {
+    const user = await this.findById(id);
+    if (!user) {
       throw new NotFoundException('User not found');
     }
 
+    Object.assign(user, updateUserDto);
+
+    await this.userRepository.save(user);
+
+    this.logger.log(`User updated id=${id}`);
+    return user;
+  }
+
+  async deleteById(id: string) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    user.status = USER_STATUS.DELETED;
+    await this.userRepository.save(user);
+
+    this.logger.log(`User deleted id=${id}`);
     return {
       id,
-      deleted: true,
     };
   }
 
-  bulkDelete(ids: BulkDeleteDto) {
-    this.logger.log(`Bulk deleting users with ids=${ids}`);
+  async bulkDelete(ids: BulkDeleteDto) {
+    const uniqueIds = [...new Set(ids.ids)];
+    if (uniqueIds.length === 0)
+      throw new BadRequestException('No user ids provided');
+
+    const result = await this.userRepository.update(
+      {
+        id: In(uniqueIds),
+        status: Not(USER_STATUS.DELETED), // Chỉ update những ai chưa xóa
+      },
+      { status: USER_STATUS.DELETED },
+    );
+
+    this.logger.log(
+      `Bulk deleted ${result.affected} users with list ids=${uniqueIds.join(',')}`,
+    );
+
     return {
-      ids,
-      deleted: true,
+      ids: uniqueIds,
+      deletedCount: result.affected ?? 0,
     };
+  }
+
+  //User endpoints logic
+  async getUserProfile(id: string) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return user;
+  }
+
+  async userCreate(createUserDto: UserRegisterDto) {
+    const userData = {
+      ...createUserDto,
+      role: USER_ROLE.USER,
+      status: USER_STATUS.ACTIVE,
+    };
+    await this.userRepository.save(userData);
+    return userData;
+  }
+
+  async userUpdate(id: string, updateUserDto: UserUpdateDto) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    Object.assign(user, updateUserDto);
+    await this.userRepository.save(user);
+    return user;
+  }
+
+  async userChangePassword(
+    id: string,
+    changePasswordDto: UserChangePasswordDto,
+  ) {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      changePasswordDto.oldPassword,
+      user.password,
+    );
+    if (!isPasswordValid) {
+      throw new BadRequestException('Invalid old password');
+    }
+
+    const newHashedPassword = await bcrypt.hash(
+      changePasswordDto.newPassword,
+      10,
+    );
+    user.password = newHashedPassword;
+    await this.userRepository.save(user);
+
+    return user;
   }
 }

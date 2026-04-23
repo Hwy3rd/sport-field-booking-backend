@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
 import { User } from 'src/modules/user/entities/user.entity';
 import { USER_ROLE, USER_STATUS } from 'src/libs/constants/user.constant';
+import * as bcrypt from 'bcrypt';
 
 const configService = new ConfigService();
 
@@ -17,7 +18,8 @@ const appDataSource = new DataSource({
 });
 
 export async function seedAdminIfMissing(userRepository: Repository<User>) {
-  const adminEmail = configService.get<string>('ADMIN_EMAIL') ?? 'admin@example.com';
+  const adminEmail =
+    configService.get<string>('ADMIN_EMAIL') ?? 'admin@example.com';
   const adminUsername = configService.get<string>('ADMIN_USERNAME') ?? 'admin';
   const adminPassword =
     configService.get<string>('ADMIN_PASSWORD') ?? 'admin123456';
@@ -25,19 +27,34 @@ export async function seedAdminIfMissing(userRepository: Repository<User>) {
     configService.get<string>('ADMIN_FULL_NAME') ?? 'System Admin';
   const adminPhone = configService.get<string>('ADMIN_PHONE') || '0901234567';
 
-  const existingAdmin = await userRepository.findOne({
-    where: { role: USER_ROLE.ADMIN },
-  });
+  let existingAdmin: User | null = null;
+  try {
+    existingAdmin = await userRepository.findOne({
+      where: { role: USER_ROLE.ADMIN },
+    });
+  } catch (error) {
+    if (
+      error instanceof QueryFailedError &&
+      (error as { driverError?: { code?: string } }).driverError?.code ===
+        '42P01'
+    ) {
+      console.warn('⚠️ Skip admin seeding: table "users" does not exist yet.');
+      return;
+    }
+    throw error;
+  }
 
   if (existingAdmin) {
-    console.log('⚠️ Admin account already exists. Skip seeding.');
+    console.log(`⚠️ Admin account already exists. Skip seeding.`);
     return;
   }
+
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
 
   const adminUser = userRepository.create({
     email: adminEmail,
     username: adminUsername,
-    password: adminPassword,
+    password: hashedPassword,
     fullName: adminFullName,
     phone: adminPhone,
     role: USER_ROLE.ADMIN,
@@ -55,10 +72,20 @@ export async function seedAdminIfMissing(userRepository: Repository<User>) {
       console.log('⚠️ Admin account already exists. Skip seeding.');
       return;
     }
+    if (
+      error instanceof QueryFailedError &&
+      (error as { driverError?: { code?: string } }).driverError?.code ===
+        '42P01'
+    ) {
+      console.warn('⚠️ Skip admin seeding: table "users" does not exist yet.');
+      return;
+    }
     throw error;
   }
 
-  console.log(`Created admin account: ${adminEmail}`);
+  console.log(
+    `Created admin account with username: ${adminUsername} and password: ${adminPassword}`,
+  );
 }
 
 async function runStandaloneSeed() {

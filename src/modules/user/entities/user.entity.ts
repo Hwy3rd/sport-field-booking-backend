@@ -5,6 +5,7 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import {
   USER_ROLE_VALUES,
@@ -18,13 +19,21 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Index('IDX_users_username', {
+    unique: true,
+    where: `"status" != '${USER_STATUS.DELETED}'`,
+  })
+  @Column({ type: 'varchar', length: 255 })
   username!: string;
 
   @Column({ type: 'text' })
   password!: string;
 
-  @Column({ type: 'varchar', length: 255, unique: true })
+  @Index('IDX_users_email', {
+    unique: true,
+    where: `"status" != '${USER_STATUS.DELETED}'`,
+  })
+  @Column({ type: 'varchar', length: 255 })
   email!: string;
 
   @Column({ name: 'full_name', type: 'varchar', length: 255 })

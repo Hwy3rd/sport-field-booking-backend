@@ -43,4 +43,9 @@ export interface AuthUser {
   username: string;
   email: string;
   role: UserRole;
+  jti?: string | null;
+}
+
+export interface RefreshAuthUser extends AuthUser {
+  jti: string;
 }

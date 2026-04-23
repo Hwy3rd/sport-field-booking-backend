@@ -4,21 +4,15 @@ import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { SwaggerModule } from '@nestjs/swagger';
 import { DocumentBuilder } from '@nestjs/swagger';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { GlobalExceptionFilter } from './common/fitlers/global-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
-import { User } from './modules/user/entities/user.entity';
-import type { Repository } from 'typeorm';
-import { seedAdminIfMissing } from './scripts/seed-admin';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const port = Number(configService.get<string>('PORT') ?? 3000);
   const clientUrl = configService.get<string>('CLIENT_URL');
-  const shouldSeedAdmin =
-    configService.get<string>('ADMIN_SEED_ON_BOOT') !== 'false';
 
   app.setGlobalPrefix('api');
 
@@ -45,11 +39,6 @@ async function bootstrap() {
   });
 
   app.use(cookieParser());
-
-  if (shouldSeedAdmin) {
-    const userRepository = app.get<Repository<User>>(getRepositoryToken(User));
-    await seedAdminIfMissing(userRepository);
-  }
 
   const config = new DocumentBuilder()
     .setTitle('Sport Field Booking API')
