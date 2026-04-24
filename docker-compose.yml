@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/hwy3rd/sport-field-booking-web:latest
+    image: ghcr.io/hwy3rd/sport-field-booking-backend:latest
     container_name: nest_app
     ports:
       - '3100:3100'
