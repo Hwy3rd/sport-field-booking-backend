@@ -1,8 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsObject, IsOptional, Min } from 'class-validator';
+import { IsInt, IsOptional, Min } from 'class-validator';
 
-export class FilterBodyDto {
+export class FilterQueryDto {
   @ApiProperty({
     description: 'The current page',
     example: 1,
@@ -22,12 +22,4 @@ export class FilterBodyDto {
   @IsInt()
   @Min(1)
   limit: number = 10;
-
-  @ApiProperty({
-    description: 'The filter of the page',
-    example: { fullName: 'Nguyen Van A' },
-  })
-  @IsOptional()
-  @IsObject()
-  filter: Record<string, unknown> = {};
 }

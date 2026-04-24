@@ -1,4 +1,3 @@
-import type { UserRole, UserStatus } from 'src/libs/constants/user.constant';
 import {
   Entity,
   Column,
@@ -8,10 +7,12 @@ import {
   Index,
 } from 'typeorm';
 import {
-  USER_ROLE_VALUES,
+  USER_STATUS,
   USER_STATUS_VALUES,
   USER_ROLE,
-  USER_STATUS,
+  USER_ROLE_VALUES,
+  type UserStatus,
+  type UserRole,
 } from 'src/libs/constants/user.constant';
 
 @Entity('users')

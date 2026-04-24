@@ -71,16 +71,16 @@ export interface FilterQueryResult<T> {
 }
 
 /**
- * Helper tìm kiếm danh sách theo FilterData gửi từ FE.
+ * Helper function to query the database with the filter data.
  *
- * FilterData dạng: { current, limit, filter: {...} }
+ * FilterData type: { current, limit, filter: {...} }
  * - regexFields: ILIKE '%value%'
- * - rangeFields: BETWEEN start AND end (hoặc >=, <= nếu 1 đầu null)
- * - customHandlers: toàn quyền chỉnh query builder
- * - select/omit: tuỳ chọn field trả về
- * - sort: mặc định createdAt DESC
+ * - rangeFields: BETWEEN start AND end (or >=, <= if one end is null)
+ * - customHandlers: full control of the query builder
+ * - select/omit: optional fields to return
+ * - sort: default sort by createdAt DESC
  *
- * Trả về { items, total, current, limit, totalPages }.
+ * Returns { items, total, current, limit, totalPages }.
  */
 export async function filterQuery<T extends ObjectLiteral>(
   repo: Repository<T>,

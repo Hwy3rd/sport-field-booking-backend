@@ -10,6 +10,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Session } from './entities/session.entity';
 import { ACCESS_TOKEN_TTL } from 'src/libs/constants/token.constent';
+import { ClearSessionCronService } from './clear-session-cron.service';
 
 @Module({
   imports: [
@@ -29,6 +30,11 @@ import { ACCESS_TOKEN_TTL } from 'src/libs/constants/token.constent';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    ClearSessionCronService,
+  ],
 })
 export class AuthModule {}

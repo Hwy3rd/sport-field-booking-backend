@@ -124,10 +124,7 @@ export class AuthService {
     const { username, password, email } = registerDto;
 
     const { usernameTaken, emailTaken } =
-      await this.userService.checkDuplicateUsernameEmail(
-      username,
-      email,
-    );
+      await this.userService.checkDuplicateUsernameEmail(username, email);
     if (usernameTaken && emailTaken) {
       throw new BadRequestException('Username and email already exist');
     }

@@ -4,6 +4,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
 import { SeedOnBootstrapService } from './scripts/seed-on-bootstrap.service';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SportModule } from './modules/sport/sport.module';
+import { VenueModule } from './modules/venue/venue.module';
+import { CourtModule } from './modules/court/court.module';
 
 @Module({
   imports: [
@@ -11,6 +15,7 @@ import { SeedOnBootstrapService } from './scripts/seed-on-bootstrap.service';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -31,6 +36,9 @@ import { SeedOnBootstrapService } from './scripts/seed-on-bootstrap.service';
     }),
     AuthModule,
     UserModule,
+    SportModule,
+    VenueModule,
+    CourtModule,
   ],
   controllers: [],
   providers: [SeedOnBootstrapService],

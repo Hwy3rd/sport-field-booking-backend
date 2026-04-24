@@ -37,22 +37,31 @@ export class UserService {
 
   async findById(id: string) {
     if (!id) return null;
-    return this.userRepository.findOne({ where: { id } });
+    return this.userRepository.findOne({
+      where: { id, status: Not(USER_STATUS.DELETED) },
+    });
   }
 
   async findByIdentifier(identifier: string) {
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isEmail = EMAIL_REGEX.test(identifier);
     if (isEmail) {
-      return this.userRepository.findOne({ where: { email: identifier } });
+      return this.userRepository.findOne({
+        where: { email: identifier, status: Not(USER_STATUS.DELETED) },
+      });
     } else {
-      return this.userRepository.findOne({ where: { username: identifier } });
+      return this.userRepository.findOne({
+        where: { username: identifier, status: Not(USER_STATUS.DELETED) },
+      });
     }
   }
 
   async checkDuplicateUsernameEmail(username: string, email: string) {
     const matchedUsers = await this.userRepository.find({
-      where: [{ username }, { email }],
+      where: [
+        { username, status: Not(USER_STATUS.DELETED) },
+        { email, status: Not(USER_STATUS.DELETED) },
+      ],
       select: ['username', 'email'],
     });
 
@@ -72,9 +81,17 @@ export class UserService {
       regexFields: ['fullName', 'username', 'email'],
     };
 
+    const safeFilterBody: FilterBodyDto = {
+      ...filterBody,
+      filter: {
+        ...(filterBody.filter ?? {}),
+        status: USER_STATUS.ACTIVE,
+      },
+    };
+
     const filteredData = await filterQuery(
       this.userRepository,
-      filterBody,
+      safeFilterBody,
       filterOptions,
     );
 
@@ -192,6 +209,7 @@ export class UserService {
     return user;
   }
 
+  //Use for register endpoint in auth module
   async userCreate(createUserDto: UserRegisterDto) {
     const userData = {
       ...createUserDto,

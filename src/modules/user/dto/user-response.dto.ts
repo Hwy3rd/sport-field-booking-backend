@@ -1,9 +1,10 @@
 import { BaseUserDto } from './base-user.dto';
 import { ApiProperty } from '@nestjs/swagger';
-import type { UserRole, UserStatus } from 'src/libs/constants/user.constant';
 import {
   USER_ROLE_VALUES,
   USER_STATUS_VALUES,
+  type UserRole,
+  type UserStatus,
 } from 'src/libs/constants/user.constant';
 import { Expose, Type } from 'class-transformer';
 import { FilteredDataResponseDto } from 'src/libs/dtos/filtered-data-response.dto';

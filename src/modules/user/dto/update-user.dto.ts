@@ -8,10 +8,11 @@ import {
   MinLength,
 } from 'class-validator';
 import { BaseUserDto } from './base-user.dto';
-import type { UserRole, UserStatus } from 'src/libs/constants/user.constant';
 import {
   USER_ROLE_VALUES,
   USER_STATUS_VALUES,
+  type UserRole,
+  type UserStatus,
 } from 'src/libs/constants/user.constant';
 
 export class UserUpdateDto extends PartialType(BaseUserDto) {}
