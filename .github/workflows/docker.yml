@@ -2,7 +2,7 @@ name: Build & Push Docker Image
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ['master']
 
 jobs:
   build:
@@ -10,7 +10,7 @@ jobs:
 
     permissions:
       contents: read
-      packages: write   # quan trọng để push GHCR
+      packages: write # quan trọng để push GHCR
 
     steps:
       - name: Checkout code
