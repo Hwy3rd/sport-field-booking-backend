@@ -8,5 +8,6 @@ import { Venue } from './entities/venue.entity';
   imports: [TypeOrmModule.forFeature([Venue])],
   controllers: [VenueController],
   providers: [VenueService],
+  exports: [VenueService],
 })
 export class VenueModule {}

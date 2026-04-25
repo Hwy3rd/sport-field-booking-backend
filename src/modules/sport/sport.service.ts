@@ -33,6 +33,13 @@ export class SportService {
     });
   }
 
+  async findOneActiveById(id: string) {
+    return await this.sportRepository.findOne({
+      where: { id, isDeleted: false },
+      select: ['id'],
+    });
+  }
+
   async create(sportDto: SportDto) {
     const existingSport = await this.sportRepository.findOne({
       where: { name: sportDto.name, isDeleted: false },

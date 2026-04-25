@@ -43,6 +43,13 @@ export class VenueService {
     return await this.venueRepository.save(newVenue);
   }
 
+  async findOneActiveById(id: string) {
+    return await this.venueRepository.findOne({
+      where: { id, status: Not(VENUE_STATUS.DELETED) },
+      select: ['id', 'ownerId'],
+    });
+  }
+
   async findAllByFilter(filterBody: FilterBodyDto) {
     const safeFilterBody: FilterBodyDto = {
       ...filterBody,

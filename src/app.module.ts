@@ -8,6 +8,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { SportModule } from './modules/sport/sport.module';
 import { VenueModule } from './modules/venue/venue.module';
 import { CourtModule } from './modules/court/court.module';
+import { TimeSlotModule } from './modules/time-slot/time-slot.module';
+import { BookingModule } from './modules/booking/booking.module';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { CourtModule } from './modules/court/court.module';
     SportModule,
     VenueModule,
     CourtModule,
+    TimeSlotModule,
+    BookingModule,
   ],
   controllers: [],
   providers: [SeedOnBootstrapService],
