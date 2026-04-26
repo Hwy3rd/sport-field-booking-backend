@@ -1,34 +1,78 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { USER_ROLE } from 'src/libs/constants/user.constant';
+import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
+import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 import { TimeSlotService } from './time-slot.service';
 import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
 import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
+import { TimeSlotQueryDto } from './dto/time-slot-query.dto';
+import type { Request } from 'express';
 
+@ApiTags('Time Slot')
 @Controller('time-slot')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
+@ApiBearerAuth()
 export class TimeSlotController {
   constructor(private readonly timeSlotService: TimeSlotService) {}
 
-  @Post()
-  create(@Body() createTimeSlotDto: CreateTimeSlotDto) {
-    return this.timeSlotService.create(createTimeSlotDto);
-  }
-
   @Get()
-  findAll() {
-    return this.timeSlotService.findAll();
+  @Roles()
+  @ApiOperation({ summary: 'Get all time slots' })
+  @ApiOkResponse({ description: 'Filtered list of time slots' })
+  findAll(@Query() query: TimeSlotQueryDto) {
+    return this.timeSlotService.findAll(query);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.timeSlotService.findOne(+id);
+  @Post()
+  @ApiOperation({ summary: 'Create a time slot' })
+  create(@Req() req: Request, @Body() createTimeSlotDto: CreateTimeSlotDto) {
+    return this.timeSlotService.create(req.user as AuthUser, createTimeSlotDto);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTimeSlotDto: UpdateTimeSlotDto) {
-    return this.timeSlotService.update(+id, updateTimeSlotDto);
+  @ApiOperation({ summary: 'Update a time slot' })
+  update(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body() updateTimeSlotDto: UpdateTimeSlotDto,
+  ) {
+    return this.timeSlotService.update(
+      req.user as AuthUser,
+      id,
+      updateTimeSlotDto,
+    );
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.timeSlotService.remove(+id);
+  @ApiOperation({ summary: 'Delete a time slot' })
+  remove(@Req() req: Request, @Param('id') id: string) {
+    return this.timeSlotService.remove(req.user as AuthUser, id);
+  }
+
+  @Post('bulk-delete')
+  @ApiOperation({ summary: 'Admin delete multiple time slots' })
+  bulkDelete(@Req() req: Request, @Body() ids: BulkDeleteDto) {
+    return this.timeSlotService.bulkDelete(req.user as AuthUser, ids);
   }
 }

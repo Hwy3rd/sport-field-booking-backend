@@ -41,6 +41,14 @@ export class SportController {
     return this.sportService.findAll(query);
   }
 
+  @Get(':id')
+  @Roles()
+  @ApiOperation({ summary: 'Get a sport by id' })
+  @ApiOkResponse({ type: SportDto })
+  findOne(@Param('id') id: string) {
+    return this.sportService.findOneById(id);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new sport' })
   @ApiOkResponse({ type: SportDto })

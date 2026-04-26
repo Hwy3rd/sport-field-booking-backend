@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -21,8 +22,8 @@ import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { USER_ROLE } from 'src/libs/constants/user.constant';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
-import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 import { AdminCreateUserDto } from './dto/create-user.dto';
+import { UserQueryDto } from './dto/user-query.dto';
 import {
   AdminChangePasswordDto,
   AdminUpdateUserDto,
@@ -70,6 +71,24 @@ export class UserController {
   }
 
   //Admin endpoints
+  @Get()
+  @Roles(USER_ROLE.ADMIN)
+  @Serialize(FilteredUserResponseDto)
+  @ApiOperation({ summary: 'Admin search users by filter' })
+  @ApiOkResponse({ type: FilteredUserResponseDto })
+  findAll(@Query() query: UserQueryDto) {
+    return this.userService.findAllByFilter(query);
+  }
+
+  @Get(':id')
+  @Roles(USER_ROLE.ADMIN)
+  @Serialize(UserResponseDto)
+  @ApiOperation({ summary: 'Admin get user detail by id' })
+  @ApiOkResponse({ type: UserResponseDto })
+  findOne(@Param('id') id: string) {
+    return this.userService.getUserProfile(id);
+  }
+
   @Post()
   @Roles(USER_ROLE.ADMIN)
   @Serialize(UserResponseDto)
@@ -77,15 +96,6 @@ export class UserController {
   @ApiOkResponse({ type: UserResponseDto })
   create(@Body() createUserDto: AdminCreateUserDto) {
     return this.userService.adminCreate(createUserDto);
-  }
-
-  @Post('search')
-  @Roles(USER_ROLE.ADMIN)
-  @Serialize(FilteredUserResponseDto)
-  @ApiOperation({ summary: 'Admin search users by filter' })
-  @ApiOkResponse({ type: FilteredUserResponseDto })
-  findAll(@Body() filterBody: FilterBodyDto) {
-    return this.userService.findAllByFilter(filterBody);
   }
 
   @Post(':id/change-password')

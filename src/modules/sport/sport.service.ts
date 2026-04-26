@@ -40,6 +40,14 @@ export class SportService {
     });
   }
 
+  async findOneById(id: string) {
+    const sport = await this.sportRepository.findOne({
+      where: { id, isDeleted: false },
+    });
+    if (!sport) throw new NotFoundException('Sport not found');
+    return sport;
+  }
+
   async create(sportDto: SportDto) {
     const existingSport = await this.sportRepository.findOne({
       where: { name: sportDto.name, isDeleted: false },

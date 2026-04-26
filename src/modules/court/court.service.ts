@@ -11,12 +11,12 @@ import { In, Not, Repository } from 'typeorm';
 import { Court } from './entities/court.entity';
 import { COURT_STATUS } from 'src/libs/constants/court.constant';
 import { filterQuery } from 'src/libs/helpers/filter-query.helper';
-import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
 import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 import { USER_ROLE } from 'src/libs/constants/user.constant';
 import { VenueService } from '../venue/venue.service';
 import { SportService } from '../sport/sport.service';
+import { CourtQueryDto } from './dto/court-query.dto';
 
 @Injectable()
 export class CourtService {
@@ -59,18 +59,55 @@ export class CourtService {
     return await this.courtRepository.save(newCourt);
   }
 
-  async findAllByFilter(filterBody: FilterBodyDto) {
-    const safeFilterBody: FilterBodyDto = {
-      ...filterBody,
+  async findAllByFilter(query: CourtQueryDto) {
+    const safeQuery = {
+      current: query.current,
+      limit: query.limit,
       filter: {
-        ...(filterBody.filter ?? {}),
-        status: COURT_STATUS.ACTIVE,
+        status: Not(COURT_STATUS.DELETED),
+        name: query.name,
+        sportId: query.sportId,
+        venueId: query.venueId,
+        pricePerHour: [query.minPrice ?? null, query.maxPrice ?? null],
       },
     };
 
-    return await filterQuery(this.courtRepository, safeFilterBody, {
+    return await filterQuery(this.courtRepository, safeQuery, {
       regexFields: ['name'],
+      rangeFields: ['pricePerHour'],
     });
+  }
+
+  async findOneActiveById(id: string) {
+    return await this.courtRepository.findOne({
+      where: { id, status: Not(COURT_STATUS.DELETED) },
+      select: ['id'],
+    });
+  }
+
+  async findOneById(id: string) {
+    const court = await this.courtRepository.findOne({
+      where: { id, status: Not(COURT_STATUS.DELETED) },
+    });
+    if (!court) throw new NotFoundException('Court not found');
+    return court;
+  }
+
+  async findOneManageableByUser(authUser: AuthUser, id: string) {
+    const court = await this.courtRepository.findOne({
+      where: { id, status: Not(COURT_STATUS.DELETED) },
+      relations: { venue: true },
+    });
+    if (!court) throw new NotFoundException('Court not found');
+
+    if (
+      authUser.role === USER_ROLE.OWNER &&
+      court.venue.ownerId !== authUser.id
+    ) {
+      throw new ForbiddenException('You can only manage courts in your own venue');
+    }
+
+    return court;
   }
 
   async update(authUser: AuthUser, id: string, updateCourtDto: UpdateCourtDto) {

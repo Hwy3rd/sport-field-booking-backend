@@ -8,6 +8,7 @@ import {
   Delete,
   Req,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { CourtService } from './court.service';
 import { CreateCourtDto } from './dto/create-court.dto';
@@ -24,6 +25,7 @@ import {
   CourtResponseDto,
   FilteredCourtResponseDto,
 } from './dto/court-response.dto';
+import { CourtQueryDto } from './dto/court-query.dto';
 
 @Controller('court')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -32,19 +34,27 @@ import {
 export class CourtController {
   constructor(private readonly courtService: CourtService) {}
 
+  @Get()
+  @Roles()
+  @ApiOperation({ summary: 'Get all court by filter' })
+  @ApiOkResponse({ type: FilteredCourtResponseDto })
+  findAll(@Query() query: CourtQueryDto) {
+    return this.courtService.findAllByFilter(query);
+  }
+
+  @Get(':id')
+  @Roles()
+  @ApiOperation({ summary: 'Get a court by id' })
+  @ApiOkResponse({ type: CourtResponseDto })
+  findOne(@Param('id') id: string) {
+    return this.courtService.findOneById(id);
+  }
+
   @Post()
   @ApiOperation({ summary: 'Create a new court' })
   @ApiOkResponse({ type: CourtResponseDto })
   create(@Body() createCourtDto: CreateCourtDto) {
     return this.courtService.create(createCourtDto);
-  }
-
-  @Post('search')
-  @Roles()
-  @ApiOperation({ summary: 'Get all courts' })
-  @ApiOkResponse({ type: FilteredCourtResponseDto })
-  findAll(@Body() filterBody: FilterBodyDto) {
-    return this.courtService.findAllByFilter(filterBody);
   }
 
   @Patch(':id')

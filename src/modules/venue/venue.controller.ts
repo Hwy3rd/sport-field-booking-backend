@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   Param,
   Patch,
   Post,
@@ -50,6 +51,14 @@ export class VenueController {
   @ApiOkResponse({ type: FilteredVenueResponseDto })
   findAll(@Body() filterBody: FilterBodyDto) {
     return this.venueService.findAllByFilter(filterBody);
+  }
+
+  @Get(':id')
+  @Roles()
+  @ApiOperation({ summary: 'Get a venue by id' })
+  @ApiOkResponse({ type: VenueResponseDto })
+  findOne(@Param('id') id: string) {
+    return this.venueService.findOneById(id);
   }
 
   @Patch(':id')

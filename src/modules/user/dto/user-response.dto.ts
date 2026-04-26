@@ -43,9 +43,50 @@ export class UserResponseDto extends BaseUserDto {
   updatedAt!: Date;
 }
 
+export class UserListItemDto {
+  @Expose()
+  @ApiProperty({
+    description: 'The id of the user',
+    example: '44ec4f15-62ba-4c0a-a9e0-f2dd5c6688b5',
+  })
+  id!: string;
+
+  @Expose()
+  @ApiProperty({
+    description: 'The email of the user',
+    example: 'email@example.com',
+  })
+  email!: string;
+
+  @Expose()
+  @ApiProperty({
+    description: 'The full name of the user',
+    example: 'Nguyen Van A',
+  })
+  fullName!: string;
+
+  @Expose()
+  @ApiProperty({ description: 'The role of the user', enum: USER_ROLE_VALUES })
+  role!: UserRole;
+
+  @Expose()
+  @ApiProperty({
+    description: 'The status of the user',
+    enum: USER_STATUS_VALUES,
+  })
+  status!: UserStatus;
+
+  @Expose()
+  @ApiProperty({
+    description: 'The creation time of the user',
+    example: '2026-04-22T09:30:00.000Z',
+  })
+  createdAt!: Date;
+}
+
 export class FilteredUserResponseDto extends FilteredDataResponseDto {
   @Expose()
-  @Type(() => UserResponseDto)
+  @Type(() => UserListItemDto)
   @ApiProperty({
     description: 'The items of the filtered data',
     example: [
@@ -55,7 +96,7 @@ export class FilteredUserResponseDto extends FilteredDataResponseDto {
         email: 'nguyenvanA@example.com',
       },
     ],
-    type: Array<UserResponseDto>,
+    type: Array<UserListItemDto>,
   })
-  items!: UserResponseDto[];
+  items!: UserListItemDto[];
 }

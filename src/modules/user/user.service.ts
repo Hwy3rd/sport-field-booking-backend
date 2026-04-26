@@ -15,7 +15,6 @@ import {
   UserChangePasswordDto,
   UserUpdateDto,
 } from 'src/modules/user/dto/update-user.dto';
-import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
@@ -26,6 +25,7 @@ import {
 } from 'src/libs/helpers/filter-query.helper';
 import { USER_ROLE, USER_STATUS } from 'src/libs/constants/user.constant';
 import * as bcrypt from 'bcrypt';
+import { UserQueryDto } from './dto/user-query.dto';
 
 @Injectable()
 export class UserService {
@@ -72,26 +72,29 @@ export class UserService {
   }
 
   //Admin endpoints logic
-  async findAllByFilter(filterBody: FilterBodyDto) {
+  async findAllByFilter(query: UserQueryDto) {
     this.logger.log(
-      `Searching users with pagination current=${filterBody.current}, limit=${filterBody.limit}, filter=${JSON.stringify(filterBody.filter)}`,
+      `Searching users with pagination current=${query.current}, limit=${query.limit}, query=${JSON.stringify(query)}`,
     );
 
     const filterOptions: FilterQueryOptions<User> = {
       regexFields: ['fullName', 'username', 'email'],
     };
 
-    const safeFilterBody: FilterBodyDto = {
-      ...filterBody,
+    const safeFilterQuery = {
+      current: query.current,
+      limit: query.limit,
       filter: {
-        ...(filterBody.filter ?? {}),
-        status: USER_STATUS.ACTIVE,
+        email: query.email,
+        fullName: query.fullName,
+        role: query.role,
+        status: query.status ?? USER_STATUS.ACTIVE,
       },
     };
 
     const filteredData = await filterQuery(
       this.userRepository,
-      safeFilterBody,
+      safeFilterQuery,
       filterOptions,
     );
 

@@ -50,6 +50,14 @@ export class VenueService {
     });
   }
 
+  async findOneById(id: string) {
+    const venue = await this.venueRepository.findOne({
+      where: { id, status: Not(VENUE_STATUS.DELETED) },
+    });
+    if (!venue) throw new NotFoundException('Venue not found');
+    return venue;
+  }
+
   async findAllByFilter(filterBody: FilterBodyDto) {
     const safeFilterBody: FilterBodyDto = {
       ...filterBody,
