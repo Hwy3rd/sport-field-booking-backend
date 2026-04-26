@@ -3,8 +3,8 @@ import {
   Controller,
   Delete,
   Get,
-  Patch,
   Param,
+  Patch,
   Post,
   Query,
   Req,
@@ -16,22 +16,24 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
+import { Serialize } from 'src/common/decorators/serialize.decorator';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { USER_ROLE } from 'src/libs/constants/user.constant';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
+import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 import { BookingService } from './booking.service';
 import { BookingQueryDto } from './dto/booking-query.dto';
 import {
   BookingResponseDto,
+  BookingWithItemsResponseDto,
   FilteredBookingResponseDto,
 } from './dto/booking-response.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
-import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
-import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 
 @ApiTags('Booking')
 @Controller('booking')
@@ -40,67 +42,67 @@ import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
-  @Get('me/history')
+  @Get('history')
+  @Serialize(BookingResponseDto)
   @ApiOperation({ summary: 'Get booking history' })
-  @ApiOkResponse({ type: BookingResponseDto })
+  @ApiOkResponse({ type: [BookingResponseDto] })
   findHistory(@GetUserId() userId: string, @Query() query: BookingQueryDto) {
-    // return this.bookingService.findBookingHistory(userId);
+    return this.bookingService.getBookingHistory(query, userId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a booking by id' })
-  @ApiOkResponse({ type: BookingResponseDto })
-  findOne(@Param('id') id: string) {
-    // return this.bookingService.findOne(id);
+  @ApiOkResponse({ type: BookingWithItemsResponseDto })
+  findOne(@GetUserId() userId: string, @Param('id') id: string) {
+    return this.bookingService.findOne(userId, id);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a booking' })
-  @ApiOkResponse({ type: BookingResponseDto })
+  @ApiOkResponse({ type: BookingWithItemsResponseDto })
   create(
-    @GetUserId() userId: string,
+    @Req() req: { user: AuthUser },
     @Body() createBookingDto: CreateBookingDto,
   ) {
-    // return this.bookingService.create(userId, createBookingDto);
+    return this.bookingService.create(req.user, createBookingDto);
   }
 
   @Post('search')
   @Roles(USER_ROLE.ADMIN)
-  @ApiOperation({ summary: 'Get all bookings by scope' })
-  @ApiOkResponse({ type: FilteredBookingResponseDto })
-  findAll(@Body() filterBody: FilterBodyDto) {
-    // return this.bookingService.findAllByFilter(filterBody);
+  @Serialize(FilteredBookingResponseDto)
+  @ApiOperation({ summary: 'Admin search bookings' })
+  @ApiOkResponse({ type: [FilteredBookingResponseDto] })
+  findAll(@Body() filterBodyDto: FilterBodyDto) {
+    return this.bookingService.findAllByFilter(filterBodyDto);
   }
 
   @Patch(':id')
   @Roles(USER_ROLE.ADMIN)
-  @ApiOperation({ summary: 'Update booking status' })
+  @ApiOperation({ summary: 'Update a booking' })
   @ApiOkResponse({ type: BookingResponseDto })
   update(@Param('id') id: string, @Body() updateBookingDto: UpdateBookingDto) {
-    // return this.bookingService.update(id, updateBookingDto);
-  }
-
-  @Patch(':id/status')
-  @ApiOperation({ summary: 'Update booking status' })
-  @ApiOkResponse({ type: BookingResponseDto })
-  updateStatus(
-    @Param('id') id: string,
-    @Body() updateBookingDto: UpdateBookingDto,
-  ) {
-    // return this.bookingService.updateStatus(id, updateBookingDto);
+    return this.bookingService.update(id, updateBookingDto);
   }
 
   @Patch(':id/cancel')
-  @Roles(USER_ROLE.ADMIN)
   @ApiOperation({ summary: 'Cancel a booking' })
-  remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
-    return this.bookingService.remove(req.user, id);
+  @ApiOkResponse({ type: BookingResponseDto })
+  cancel(@GetUserId() userId: string, @Param('id') id: string) {
+    return this.bookingService.cancelBooking(userId, id);
   }
 
-  @Post('bulk-cancel')
+  @Delete(':id')
+  @Roles(USER_ROLE.ADMIN)
+  @ApiOperation({ summary: 'Delete a booking' })
+  @ApiOkResponse({ type: BookingResponseDto })
+  delete(@Param('id') id: string) {
+    return this.bookingService.remove(id);
+  }
+
+  @Post('bulk-delete')
   @Roles(USER_ROLE.ADMIN)
   @ApiOperation({ summary: 'Admin bulk cancel bookings' })
-  bulkDelete(@Req() req: { user: AuthUser }, @Body() ids: BulkDeleteDto) {
-    return this.bookingService.bulkDelete(req.user, ids);
+  bulkDelete(@Body() ids: BulkDeleteDto) {
+    return this.bookingService.bulkDelete(ids);
   }
 }

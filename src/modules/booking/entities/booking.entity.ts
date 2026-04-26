@@ -43,6 +43,9 @@ export class Booking {
   })
   status!: BookingStatus;
 
+  @Column({ default: false })
+  isDeleted!: boolean;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

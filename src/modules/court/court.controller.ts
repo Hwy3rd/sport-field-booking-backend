@@ -13,12 +13,16 @@ import {
 import { CourtService } from './court.service';
 import { CreateCourtDto } from './dto/create-court.dto';
 import { UpdateCourtDto } from './dto/update-court.dto';
-import { ApiBearerAuth, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
-import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 import { USER_ROLE } from 'src/libs/constants/user.constant';
-import { AuthUser } from 'src/libs/types/jwt-payload.type';
+import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import {
@@ -27,6 +31,7 @@ import {
 } from './dto/court-response.dto';
 import { CourtQueryDto } from './dto/court-query.dto';
 
+@ApiTags('Court')
 @Controller('court')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(USER_ROLE.ADMIN)
@@ -36,7 +41,7 @@ export class CourtController {
 
   @Get()
   @Roles()
-  @ApiOperation({ summary: 'Get all court by filter' })
+  @ApiOperation({ summary: 'Get all courts' })
   @ApiOkResponse({ type: FilteredCourtResponseDto })
   findAll(@Query() query: CourtQueryDto) {
     return this.courtService.findAllByFilter(query);

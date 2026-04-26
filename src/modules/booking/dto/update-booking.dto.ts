@@ -1,11 +1,10 @@
-import { PartialType } from '@nestjs/swagger';
-import { CreateBookingDto } from './create-booking.dto';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsIn, IsOptional } from 'class-validator';
 import {
   BOOKING_STATUS_VALUES,
   type BookingStatus,
 } from 'src/libs/constants/booking.constant';
+import { CreateBookingDto } from './create-booking.dto';
 
 export class UpdateBookingDto extends PartialType(CreateBookingDto) {
   @ApiPropertyOptional({

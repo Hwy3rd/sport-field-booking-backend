@@ -71,7 +71,7 @@ export class SportController {
   }
 
   @Post('bulk-delete')
-  @ApiOperation({ summary: 'Admin delete multiple users' })
+  @ApiOperation({ summary: 'Admin delete multiple sports' })
   bulkDelete(@Body() ids: BulkDeleteDto) {
     return this.sportService.bulkDelete(ids);
   }

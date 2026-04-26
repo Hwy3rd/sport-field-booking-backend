@@ -10,6 +10,7 @@ import { VenueModule } from './modules/venue/venue.module';
 import { CourtModule } from './modules/court/court.module';
 import { TimeSlotModule } from './modules/time-slot/time-slot.module';
 import { BookingModule } from './modules/booking/booking.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { BookingModule } from './modules/booking/booking.module';
     CourtModule,
     TimeSlotModule,
     BookingModule,
+    ReviewModule,
   ],
   controllers: [],
   providers: [SeedOnBootstrapService],

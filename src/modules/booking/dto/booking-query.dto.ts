@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsOptional, IsUUID } from 'class-validator';
+import { IsDateString, IsIn, IsOptional, IsUUID } from 'class-validator';
 import {
   BOOKING_STATUS_VALUES,
   type BookingStatus,
@@ -18,10 +18,18 @@ export class BookingQueryDto extends FilterQueryDto {
   status?: BookingStatus;
 
   @ApiPropertyOptional({
-    description: 'Filter by user id (admin only)',
-    format: 'uuid',
+    description: 'Filter by start date',
+    format: 'date',
   })
   @IsOptional()
-  @IsUUID()
-  userId?: string;
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by end date',
+    format: 'date',
+  })
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 }

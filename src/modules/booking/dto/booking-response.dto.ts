@@ -95,14 +95,6 @@ export class BookingResponseDto {
   status!: BookingStatus;
 
   @Expose()
-  @Type(() => BookingItemResponseDto)
-  @ApiProperty({
-    description: 'Booking items',
-    type: [BookingItemResponseDto],
-  })
-  items!: BookingItemResponseDto[];
-
-  @Expose()
   @ApiProperty({
     description: 'Created time',
     example: '2026-04-22T09:30:00.000Z',
@@ -117,12 +109,22 @@ export class BookingResponseDto {
   updatedAt!: Date;
 }
 
+export class BookingWithItemsResponseDto extends BookingResponseDto {
+  @Expose()
+  @Type(() => BookingItemResponseDto)
+  @ApiProperty({
+    description: 'Booking items',
+    type: [BookingItemResponseDto],
+  })
+  items!: BookingItemResponseDto[];
+}
+
 export class FilteredBookingResponseDto extends FilteredDataResponseDto {
   @Expose()
-  @Type(() => BookingResponseDto)
+  @Type(() => BookingWithItemsResponseDto)
   @ApiProperty({
     description: 'Filtered booking list',
-    type: [BookingResponseDto],
+    type: [BookingWithItemsResponseDto],
   })
-  items!: BookingResponseDto[];
+  items!: BookingWithItemsResponseDto[];
 }
