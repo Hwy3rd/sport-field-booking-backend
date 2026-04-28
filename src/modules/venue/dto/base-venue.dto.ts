@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { IsEmail, IsNotEmpty, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+} from 'class-validator';
+import { TIME_REGEX } from 'src/libs/constants/regex.constant';
 
 export class VenueOperatingHoursDto {
   @Expose()
@@ -10,7 +18,8 @@ export class VenueOperatingHoursDto {
   })
   @IsNotEmpty()
   @IsString()
-  start_time!: string;
+  @Matches(TIME_REGEX, { message: 'startTime must be HH:mm or HH:mm:ss' })
+  startTime!: string;
 
   @Expose()
   @ApiProperty({
@@ -19,7 +28,8 @@ export class VenueOperatingHoursDto {
   })
   @IsNotEmpty()
   @IsString()
-  end_time!: string;
+  @Matches(TIME_REGEX, { message: 'endTime must be HH:mm or HH:mm:ss' })
+  endTime!: string;
 }
 
 export class VenueContactInfoDto {
@@ -86,12 +96,12 @@ export class BaseVenueDto {
     description: 'Venue operating hours',
     type: VenueOperatingHoursDto,
   })
-  operating_hours!: VenueOperatingHoursDto;
+  operatingHours!: VenueOperatingHoursDto;
 
   @Expose()
   @ApiProperty({
     description: 'Venue contact information',
     type: VenueContactInfoDto,
   })
-  contact_info!: VenueContactInfoDto;
+  contactInfo!: VenueContactInfoDto;
 }

@@ -18,6 +18,7 @@ import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
 import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 import { USER_ROLE } from 'src/libs/constants/user.constant';
 import { TimeSlotService } from '../time-slot/time-slot.service';
+import { VenueQueryDto } from './dto/venue-query.dto';
 
 @Injectable()
 export class VenueService {
@@ -27,6 +28,38 @@ export class VenueService {
     @Inject(forwardRef(() => TimeSlotService))
     private readonly timeSlotService: TimeSlotService,
   ) {}
+
+  async findAllByQuery(query: VenueQueryDto) {
+    const { name, address, startTime, endTime } = query;
+    const safeQuery = {
+      current: query.current,
+      limit: query.limit,
+      filter: {
+        name,
+        address,
+        status: VENUE_STATUS.ACTIVE,
+        startTime,
+        endTime,
+      },
+    };
+
+    const venues = await filterQuery(this.venueRepository, safeQuery, {
+      regexFields: ['name', 'address'],
+      customHandlers: {
+        startTime: (qb, value, alias) => {
+          qb.andWhere(`:startTime < ((${alias}.operating_hours->>'endTime')::time)`, {
+            startTime: String(value),
+          });
+        },
+        endTime: (qb, value, alias) => {
+          qb.andWhere(`:endTime > ((${alias}.operating_hours->>'startTime')::time)`, {
+            endTime: String(value),
+          });
+        },
+      },
+    });
+    return venues;
+  }
 
   async create(createVenueDto: CreateVenueDto) {
     const existingVenue = await this.venueRepository.findOne({

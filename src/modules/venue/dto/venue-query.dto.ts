@@ -1,7 +1,8 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsOptional, IsString, IsUUID } from 'class-validator';
+import { IsOptional, IsString, IsUUID, Matches } from 'class-validator';
 import { FilterQueryDto } from 'src/libs/dtos/filter-query.dto';
+import { TIME_REGEX } from 'src/libs/constants/regex.constant';
 
 export class VenueQueryDto extends FilterQueryDto {
   @ApiPropertyOptional({
@@ -23,10 +24,20 @@ export class VenueQueryDto extends FilterQueryDto {
   address?: string;
 
   @ApiPropertyOptional({
-    description: 'Filter by owner id',
-    format: 'uuid',
+    description: 'Filter by operating hours start time',
+    example: '18:00:00',
   })
   @IsOptional()
-  @IsUUID()
-  ownerId?: string;
+  @IsString()
+  @Matches(TIME_REGEX, { message: 'startTime must be HH:mm or HH:mm:ss' })
+  startTime?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by operating hours end time',
+    example: '19:30:00',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(TIME_REGEX, { message: 'endTime must be HH:mm or HH:mm:ss' })
+  endTime?: string;
 }

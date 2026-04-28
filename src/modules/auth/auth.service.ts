@@ -117,6 +117,9 @@ export class AuthService {
     return {
       accessToken,
       refreshToken,
+      id: user.id,
+      role: user.role,
+      fullName: user.fullName,
     };
   }
 

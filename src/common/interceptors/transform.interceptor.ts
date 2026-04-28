@@ -13,9 +13,10 @@ import { Reflector } from '@nestjs/core';
 import { plainToInstance } from 'class-transformer';
 
 interface Response<T> {
+  success: boolean;
   statusCode: number;
   message: string;
-  data: T;
+  data: T | null;
 }
 
 @Injectable()
@@ -56,7 +57,7 @@ export class TransformInterceptor<T> implements NestInterceptor<
         success: true,
         statusCode,
         message: message || defaultMessage,
-        data: this.serializeData(data, serializeDto) as T,
+        data: (this.serializeData(data, serializeDto) as T) ?? null,
       })),
     );
   }

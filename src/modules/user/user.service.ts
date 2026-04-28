@@ -145,10 +145,10 @@ export class UserService {
     );
 
     user.password = newHashedPassword;
-    await this.userRepository.save(user);
+    const result = await this.userRepository.save(user);
 
     this.logger.log(`Password changed for user id=${id}`);
-    return;
+    return result;
   }
 
   async adminUpdate(id: string, updateUserDto: AdminUpdateUserDto) {

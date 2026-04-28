@@ -1,5 +1,6 @@
 import {
   Body,
+  ConflictException,
   Controller,
   Delete,
   Get,
@@ -100,6 +101,7 @@ export class UserController {
 
   @Post(':id/change-password')
   @Roles(USER_ROLE.ADMIN)
+  @Serialize(UserResponseDto)
   @ApiOperation({ summary: 'Admin change password for a user by id' })
   @ApiOkResponse({ type: UserResponseDto })
   adminChangePassword(
@@ -121,14 +123,20 @@ export class UserController {
   @Delete(':id')
   @Roles(USER_ROLE.ADMIN)
   @ApiOperation({ summary: 'Admin delete a user by id' })
-  delete(@Param('id') id: string) {
+  delete(@GetUserId() userId: string, @Param('id') id: string) {
+    if (userId === id) {
+      throw new ConflictException('You cannot delete yourself');
+    }
     return this.userService.deleteById(id);
   }
 
   @Post('bulk-delete')
   @Roles(USER_ROLE.ADMIN)
   @ApiOperation({ summary: 'Admin delete multiple users' })
-  bulkDelete(@Body() ids: BulkDeleteDto) {
+  bulkDelete(@GetUserId() userId: string, @Body() ids: BulkDeleteDto) {
+    if (ids.ids.includes(userId)) {
+      throw new ConflictException('You cannot delete yourself');
+    }
     return this.userService.bulkDelete(ids);
   }
 }

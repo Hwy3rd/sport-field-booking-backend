@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -29,6 +30,8 @@ import {
   VenueResponseDto,
 } from './dto/venue-response.dto';
 import { VenueService } from './venue.service';
+import { VenueQueryDto } from './dto/venue-query.dto';
+import { Serialize } from 'src/common/decorators/serialize.decorator';
 
 @ApiTags('Venue')
 @Controller('venue')
@@ -47,10 +50,20 @@ export class VenueController {
 
   @Post('search')
   @Roles()
+  @Serialize(VenueResponseDto)
   @ApiOperation({ summary: 'Get all venues' })
   @ApiOkResponse({ type: FilteredVenueResponseDto })
   findAll(@Body() filterBody: FilterBodyDto) {
     return this.venueService.findAllByFilter(filterBody);
+  }
+
+  @Get()
+  @Roles()
+  @Serialize(VenueResponseDto)
+  @ApiOperation({ summary: 'Get all venues' })
+  @ApiOkResponse({ type: FilteredVenueResponseDto })
+  findAllByQuery(@Query() query: VenueQueryDto) {
+    return this.venueService.findAllByQuery(query);
   }
 
   @Get(':id')

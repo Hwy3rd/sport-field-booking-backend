@@ -16,8 +16,8 @@ import {
 } from 'typeorm';
 
 type VenueOperatingHours = {
-  start_time: string;
-  end_time: string;
+  startTime: string;
+  endTime: string;
 };
 
 type VenueContactInfo = {
@@ -48,14 +48,14 @@ export class Venue {
   @Column({ type: 'varchar', length: 255 })
   address!: string;
 
-  @Column({ type: 'text' })
-  description!: string;
+  @Column({ type: 'text', nullable: true })
+  description?: string;
 
-  @Column({ type: 'jsonb' })
-  operating_hours!: VenueOperatingHours;
+  @Column({ name: 'operating_hours', type: 'jsonb' })
+  operatingHours!: VenueOperatingHours;
 
-  @Column({ type: 'jsonb' })
-  contact_info!: VenueContactInfo;
+  @Column({ name: 'contact_info', type: 'jsonb' })
+  contactInfo!: VenueContactInfo;
 
   @Column({
     type: 'enum',
