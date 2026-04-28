@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -22,6 +24,7 @@ export class TimeSlotService {
   constructor(
     @InjectRepository(TimeSlot)
     private readonly timeSlotRepository: Repository<TimeSlot>,
+    @Inject(forwardRef(() => CourtService))
     private readonly courtService: CourtService,
   ) {}
 
@@ -71,6 +74,34 @@ export class TimeSlotService {
   async updateStatusByIds(ids: string[], status: TimeSlotStatus) {
     if (ids.length === 0) return;
     await this.timeSlotRepository.update({ id: In(ids) }, { status });
+  }
+
+  async blockAvailableByCourtIds(courtIds: string[]) {
+    if (courtIds.length === 0) return;
+    await this.timeSlotRepository.update(
+      { courtId: In(courtIds), status: TIME_SLOT_STATUS.AVAILABLE },
+      { status: TIME_SLOT_STATUS.BLOCKED },
+    );
+  }
+
+  async blockAvailableByVenueIds(venueIds: string[]) {
+    if (venueIds.length === 0) return;
+    await this.timeSlotRepository
+      .createQueryBuilder()
+      .update(TimeSlot)
+      .set({ status: TIME_SLOT_STATUS.BLOCKED })
+      .where('"status" = :availableStatus', {
+        availableStatus: TIME_SLOT_STATUS.AVAILABLE,
+      })
+      .andWhere(
+        `"court_id" IN (
+          SELECT "id"
+          FROM "courts"
+          WHERE "venue_id" IN (:...venueIds)
+        )`,
+      )
+      .setParameter('venueIds', venueIds)
+      .execute();
   }
 
   async update(

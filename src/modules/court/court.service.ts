@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,14 +19,18 @@ import { USER_ROLE } from 'src/libs/constants/user.constant';
 import { VenueService } from '../venue/venue.service';
 import { SportService } from '../sport/sport.service';
 import { CourtQueryDto } from './dto/court-query.dto';
+import { TimeSlotService } from '../time-slot/time-slot.service';
 
 @Injectable()
 export class CourtService {
   constructor(
     @InjectRepository(Court)
     private readonly courtRepository: Repository<Court>,
+    @Inject(forwardRef(() => VenueService))
     private readonly venueService: VenueService,
     private readonly sportService: SportService,
+    @Inject(forwardRef(() => TimeSlotService))
+    private readonly timeSlotService: TimeSlotService,
   ) {}
 
   async create(createCourtDto: CreateCourtDto) {
@@ -181,6 +187,7 @@ export class CourtService {
 
     existingCourt.status = COURT_STATUS.DELETED;
     await this.courtRepository.save(existingCourt);
+    await this.timeSlotService.blockAvailableByCourtIds([existingCourt.id]);
     return { id };
   }
 
@@ -196,6 +203,7 @@ export class CourtService {
       },
       { status: COURT_STATUS.DELETED },
     );
+    await this.timeSlotService.blockAvailableByCourtIds(uniqueIds);
 
     return {
       ids: uniqueIds,

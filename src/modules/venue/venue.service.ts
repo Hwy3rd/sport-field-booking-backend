@@ -1,6 +1,8 @@
 import {
   BadRequestException,
   ForbiddenException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,12 +17,15 @@ import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
 import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 import { USER_ROLE } from 'src/libs/constants/user.constant';
+import { TimeSlotService } from '../time-slot/time-slot.service';
 
 @Injectable()
 export class VenueService {
   constructor(
     @InjectRepository(Venue)
     private readonly venueRepository: Repository<Venue>,
+    @Inject(forwardRef(() => TimeSlotService))
+    private readonly timeSlotService: TimeSlotService,
   ) {}
 
   async create(createVenueDto: CreateVenueDto) {
@@ -119,6 +124,7 @@ export class VenueService {
 
     existingVenue.status = VENUE_STATUS.DELETED;
     await this.venueRepository.save(existingVenue);
+    await this.timeSlotService.blockAvailableByVenueIds([existingVenue.id]);
     return { id };
   }
 
@@ -134,6 +140,7 @@ export class VenueService {
       },
       { status: VENUE_STATUS.DELETED },
     );
+    await this.timeSlotService.blockAvailableByVenueIds(uniqueIds);
 
     return {
       ids: uniqueIds,
