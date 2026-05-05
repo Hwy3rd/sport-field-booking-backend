@@ -20,6 +20,12 @@ import { VenueService } from '../venue/venue.service';
 import { SportService } from '../sport/sport.service';
 import { CourtQueryDto } from './dto/court-query.dto';
 import { TimeSlotService } from '../time-slot/time-slot.service';
+import { TimeSlot } from '../time-slot/entities/time-slot.entity';
+import { TimeSlotTemplate } from '../time-slot/entities/time-slot-template.entity';
+import {
+  TIME_SLOT_STATUS,
+  type TimeSlotStatus,
+} from 'src/libs/constants/time-slot.constant';
 
 @Injectable()
 export class CourtService {
@@ -31,6 +37,10 @@ export class CourtService {
     private readonly sportService: SportService,
     @Inject(forwardRef(() => TimeSlotService))
     private readonly timeSlotService: TimeSlotService,
+    @InjectRepository(TimeSlot)
+    private readonly timeSlotRepository: Repository<TimeSlot>,
+    @InjectRepository(TimeSlotTemplate)
+    private readonly timeSlotTemplateRepository: Repository<TimeSlotTemplate>,
   ) {}
 
   async create(createCourtDto: CreateCourtDto) {
@@ -57,12 +67,16 @@ export class CourtService {
       );
     }
 
+    const { timeSlotConfig, ...courtData } = createCourtDto;
+
     const newCourt = this.courtRepository.create({
-      ...createCourtDto,
+      ...courtData,
       status: COURT_STATUS.ACTIVE,
     });
 
-    return await this.courtRepository.save(newCourt);
+    const savedCourt = await this.courtRepository.save(newCourt);
+    await this.applyTimeSlotConfig(savedCourt.id, venue.operatingHours, timeSlotConfig);
+    return savedCourt;
   }
 
   async findAllByFilter(query: CourtQueryDto) {
@@ -70,7 +84,6 @@ export class CourtService {
       current: query.current,
       limit: query.limit,
       filter: {
-        status: Not(COURT_STATUS.DELETED),
         name: query.name,
         sportId: query.sportId,
         venueId: query.venueId,
@@ -78,10 +91,39 @@ export class CourtService {
       },
     };
 
-    return await filterQuery(this.courtRepository, safeQuery, {
+    const result = await filterQuery(this.courtRepository, safeQuery, {
       regexFields: ['name'],
       rangeFields: ['pricePerHour'],
+      customHandlers: {
+        status: (qb, value, alias) => {
+          qb.andWhere(`${alias}.status != :excludedStatus`, {
+            excludedStatus: COURT_STATUS.DELETED,
+          });
+        },
+      },
     });
+
+    const items = result.items ?? [];
+    if (items.length === 0) return result;
+
+    const courtsWithRelations = await this.courtRepository.find({
+      where: { id: In(items.map((item) => item.id)) },
+      relations: { venue: true, sport: true },
+    });
+    const relationMap = new Map(courtsWithRelations.map((item) => [item.id, item]));
+
+    return {
+      ...result,
+      items: items.map((item) => {
+        const related = relationMap.get(item.id);
+        if (!related) return item;
+        return {
+          ...item,
+          venue: related.venue,
+          sport: related.sport,
+        };
+      }),
+    };
   }
 
   async findOneActiveById(id: string) {
@@ -94,6 +136,7 @@ export class CourtService {
   async findOneById(id: string) {
     const court = await this.courtRepository.findOne({
       where: { id, status: Not(COURT_STATUS.DELETED) },
+      relations: { venue: true, sport: true },
     });
     if (!court) throw new NotFoundException('Court not found');
     return court;
@@ -110,7 +153,9 @@ export class CourtService {
       authUser.role === USER_ROLE.OWNER &&
       court.venue.ownerId !== authUser.id
     ) {
-      throw new ForbiddenException('You can only manage courts in your own venue');
+      throw new ForbiddenException(
+        'You can only manage courts in your own venue',
+      );
     }
 
     return court;
@@ -174,8 +219,16 @@ export class CourtService {
       );
     }
 
-    Object.assign(existingCourt, updateCourtDto);
-    return await this.courtRepository.save(existingCourt);
+    const { timeSlotConfig, ...courtData } = updateCourtDto;
+    Object.assign(existingCourt, courtData);
+    const updatedCourt = await this.courtRepository.save(existingCourt);
+    const venue = await this.venueService.findOneActiveById(updatedCourt.venueId);
+    await this.applyTimeSlotConfig(
+      updatedCourt.id,
+      venue?.operatingHours,
+      timeSlotConfig,
+    );
+    return updatedCourt;
   }
 
   async remove(id: string) {
@@ -209,5 +262,139 @@ export class CourtService {
       ids: uniqueIds,
       deletedCount: result.affected ?? 0,
     };
+  }
+
+  private normalizeTime(time: string): string {
+    return time.length === 5 ? `${time}:00` : time;
+  }
+
+  private assertTimeInsideOperatingHours(
+    startTime: string,
+    endTime: string,
+    operatingHours?: { startTime?: string; endTime?: string } | null,
+  ) {
+    if (!operatingHours?.startTime || !operatingHours?.endTime) return;
+    const venueStart = this.normalizeTime(operatingHours.startTime);
+    const venueEnd = this.normalizeTime(operatingHours.endTime);
+    const slotStart = this.normalizeTime(startTime);
+    const slotEnd = this.normalizeTime(endTime);
+
+    if (slotStart < venueStart || slotEnd > venueEnd || slotStart >= slotEnd) {
+      throw new BadRequestException(
+        `Time slot ${startTime}-${endTime} is outside venue operating hours ${operatingHours.startTime}-${operatingHours.endTime}`,
+      );
+    }
+  }
+
+  private async ensureNoDuplicateSlot(
+    courtId: string,
+    date: string,
+    startTime: string,
+    endTime: string,
+  ) {
+    const existing = await this.timeSlotRepository.findOne({
+      where: {
+        courtId,
+        date: new Date(date),
+        startTime,
+        endTime,
+      },
+      select: ['id'],
+    });
+    if (existing) {
+      throw new BadRequestException(
+        `Duplicate time slot for ${date} ${startTime}-${endTime}`,
+      );
+    }
+  }
+
+  private async applyTimeSlotConfig(
+    courtId: string,
+    operatingHours: { startTime?: string; endTime?: string } | null | undefined,
+    config: CreateCourtDto['timeSlotConfig'] | UpdateCourtDto['timeSlotConfig'],
+  ) {
+    if (!config) return;
+
+    if (config.manualSlots?.length) {
+      for (const slot of config.manualSlots) {
+        this.assertTimeInsideOperatingHours(
+          slot.startTime,
+          slot.endTime,
+          operatingHours,
+        );
+        await this.ensureNoDuplicateSlot(
+          courtId,
+          slot.date,
+          slot.startTime,
+          slot.endTime,
+        );
+        await this.timeSlotRepository.save(
+          this.timeSlotRepository.create({
+            courtId,
+            date: slot.date,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            price: slot.price,
+            status: slot.status ?? TIME_SLOT_STATUS.AVAILABLE,
+          }),
+        );
+      }
+    }
+
+    if (config.templateGeneration) {
+      const template = config.templateGeneration;
+      this.assertTimeInsideOperatingHours(
+        template.startTime,
+        template.endTime,
+        operatingHours,
+      );
+
+      if (template.createTemplate !== false) {
+        await this.timeSlotTemplateRepository.save(
+          this.timeSlotTemplateRepository.create({
+            courtId,
+            weekday: template.weekday,
+            startTime: template.startTime,
+            endTime: template.endTime,
+            price: template.price,
+            isActive: true,
+          }),
+        );
+      }
+
+      const start = new Date(`${template.startDate}T00:00:00`);
+      const end = new Date(`${template.endDate}T00:00:00`);
+      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+        throw new BadRequestException('Invalid template date range');
+      }
+
+      for (
+        const date = new Date(start);
+        date <= end;
+        date.setDate(date.getDate() + 1)
+      ) {
+        const weekday = ((date.getDay() + 6) % 7) + 1;
+        if (weekday !== template.weekday) continue;
+
+        const isoDate = date.toISOString().split('T')[0];
+        await this.ensureNoDuplicateSlot(
+          courtId,
+          isoDate,
+          template.startTime,
+          template.endTime,
+        );
+
+        await this.timeSlotRepository.save(
+          this.timeSlotRepository.create({
+            courtId,
+            date: isoDate,
+            startTime: template.startTime,
+            endTime: template.endTime,
+            price: template.price,
+            status: TIME_SLOT_STATUS.AVAILABLE as TimeSlotStatus,
+          }),
+        );
+      }
+    }
   }
 }

@@ -30,14 +30,10 @@ import type { Request } from 'express';
 
 @ApiTags('Time Slot')
 @Controller('time-slot')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
-@ApiBearerAuth()
 export class TimeSlotController {
   constructor(private readonly timeSlotService: TimeSlotService) {}
 
   @Get()
-  @Roles()
   @ApiOperation({ summary: 'Get all time slots' })
   @ApiOkResponse({ description: 'Filtered list of time slots' })
   findAll(@Query() query: TimeSlotQueryDto) {
@@ -45,12 +41,18 @@ export class TimeSlotController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a time slot' })
   create(@Req() req: Request, @Body() createTimeSlotDto: CreateTimeSlotDto) {
     return this.timeSlotService.create(req.user as AuthUser, createTimeSlotDto);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a time slot' })
   update(
     @Req() req: Request,
@@ -65,12 +67,18 @@ export class TimeSlotController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a time slot' })
   remove(@Req() req: Request, @Param('id') id: string) {
     return this.timeSlotService.remove(req.user as AuthUser, id);
   }
 
   @Post('bulk-delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin delete multiple time slots' })
   bulkDelete(@Req() req: Request, @Body() ids: BulkDeleteDto) {
     return this.timeSlotService.bulkDelete(req.user as AuthUser, ids);

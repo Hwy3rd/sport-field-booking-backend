@@ -7,6 +7,26 @@ import {
 import { FilteredDataResponseDto } from 'src/libs/dtos/filtered-data-response.dto';
 import { BaseCourtDto } from './base-court.dto';
 
+class CourtVenueSummaryDto {
+  @Expose()
+  @ApiProperty({ description: 'Venue id' })
+  id!: string;
+
+  @Expose()
+  @ApiProperty({ description: 'Venue name' })
+  name!: string;
+}
+
+class CourtSportSummaryDto {
+  @Expose()
+  @ApiProperty({ description: 'Sport id' })
+  id!: string;
+
+  @Expose()
+  @ApiProperty({ description: 'Sport name' })
+  name!: string;
+}
+
 export class CourtResponseDto extends BaseCourtDto {
   @Expose()
   @ApiProperty({
@@ -35,6 +55,24 @@ export class CourtResponseDto extends BaseCourtDto {
     example: '2026-04-22T10:00:00.000Z',
   })
   updatedAt!: Date;
+
+  @Expose()
+  @Type(() => CourtVenueSummaryDto)
+  @ApiProperty({
+    description: 'Venue summary',
+    type: CourtVenueSummaryDto,
+    required: false,
+  })
+  venue?: CourtVenueSummaryDto;
+
+  @Expose()
+  @Type(() => CourtSportSummaryDto)
+  @ApiProperty({
+    description: 'Sport summary',
+    type: CourtSportSummaryDto,
+    required: false,
+  })
+  sport?: CourtSportSummaryDto;
 }
 
 export class FilteredCourtResponseDto extends FilteredDataResponseDto {

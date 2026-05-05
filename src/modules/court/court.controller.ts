@@ -33,14 +33,10 @@ import { CourtQueryDto } from './dto/court-query.dto';
 
 @ApiTags('Court')
 @Controller('court')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(USER_ROLE.ADMIN)
-@ApiBearerAuth()
 export class CourtController {
   constructor(private readonly courtService: CourtService) {}
 
   @Get()
-  @Roles()
   @ApiOperation({ summary: 'Get all courts' })
   @ApiOkResponse({ type: FilteredCourtResponseDto })
   findAll(@Query() query: CourtQueryDto) {
@@ -48,7 +44,6 @@ export class CourtController {
   }
 
   @Get(':id')
-  @Roles()
   @ApiOperation({ summary: 'Get a court by id' })
   @ApiOkResponse({ type: CourtResponseDto })
   findOne(@Param('id') id: string) {
@@ -56,6 +51,9 @@ export class CourtController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new court' })
   @ApiOkResponse({ type: CourtResponseDto })
   create(@Body() createCourtDto: CreateCourtDto) {
@@ -63,7 +61,9 @@ export class CourtController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a court' })
   @ApiOkResponse({ type: CourtResponseDto })
   update(
@@ -75,12 +75,18 @@ export class CourtController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a court' })
   remove(@Param('id') id: string) {
     return this.courtService.remove(id);
   }
 
   @Post('bulk-delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin delete multiple courts' })
   bulkDelete(@Body() ids: BulkDeleteDto) {
     return this.courtService.bulkDelete(ids);

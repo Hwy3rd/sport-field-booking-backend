@@ -1,12 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Expose } from 'class-transformer';
+import { Expose, Type } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
+  IsNotEmptyObject,
+  IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   Matches,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
 import { TIME_REGEX } from 'src/libs/constants/regex.constant';
 
@@ -93,9 +97,23 @@ export class BaseVenueDto {
 
   @Expose()
   @ApiProperty({
+    description: 'Venue image URL',
+    example: 'https://cdn.example.com/venues/venue-1.jpg',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  imageUrl?: string;
+
+  @Expose()
+  @ApiProperty({
     description: 'Venue operating hours',
     type: VenueOperatingHoursDto,
   })
+  @IsNotEmptyObject()
+  @ValidateNested()
+  @Type(() => VenueOperatingHoursDto)
   operatingHours!: VenueOperatingHoursDto;
 
   @Expose()
@@ -103,5 +121,8 @@ export class BaseVenueDto {
     description: 'Venue contact information',
     type: VenueContactInfoDto,
   })
+  @IsNotEmptyObject()
+  @ValidateNested()
+  @Type(() => VenueContactInfoDto)
   contactInfo!: VenueContactInfoDto;
 }

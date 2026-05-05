@@ -47,14 +47,20 @@ export class VenueService {
       regexFields: ['name', 'address'],
       customHandlers: {
         startTime: (qb, value, alias) => {
-          qb.andWhere(`:startTime < ((${alias}.operating_hours->>'endTime')::time)`, {
-            startTime: String(value),
-          });
+          qb.andWhere(
+            `:startTime < ((${alias}.operating_hours->>'endTime')::time)`,
+            {
+              startTime: String(value),
+            },
+          );
         },
         endTime: (qb, value, alias) => {
-          qb.andWhere(`:endTime > ((${alias}.operating_hours->>'startTime')::time)`, {
-            endTime: String(value),
-          });
+          qb.andWhere(
+            `:endTime > ((${alias}.operating_hours->>'startTime')::time)`,
+            {
+              endTime: String(value),
+            },
+          );
         },
       },
     });
@@ -84,7 +90,7 @@ export class VenueService {
   async findOneActiveById(id: string) {
     return await this.venueRepository.findOne({
       where: { id, status: Not(VENUE_STATUS.DELETED) },
-      select: ['id', 'ownerId'],
+      select: ['id', 'ownerId', 'operatingHours'],
     });
   }
 
@@ -101,12 +107,18 @@ export class VenueService {
       ...filterBody,
       filter: {
         ...(filterBody.filter ?? {}),
-        status: VENUE_STATUS.ACTIVE,
       },
     };
 
     return await filterQuery(this.venueRepository, safeFilterBody, {
       regexFields: ['name', 'address'],
+      customHandlers: {
+        status: (qb, value, alias) => {
+          qb.andWhere(`${alias}.status != :excludedStatus`, {
+            excludedStatus: VENUE_STATUS.DELETED,
+          });
+        },
+      },
     });
   }
 

@@ -31,8 +31,6 @@ import { GetUserId } from 'src/common/decorators/get-user-id.decorator';
 
 @ApiTags('Review')
 @Controller('review')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@ApiBearerAuth()
 export class ReviewController {
   constructor(private readonly reviewService: ReviewService) {}
 
@@ -44,6 +42,8 @@ export class ReviewController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a review' })
   @ApiOkResponse({ type: ReviewResponseDto })
   create(
@@ -54,6 +54,8 @@ export class ReviewController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a review' })
   @ApiOkResponse({ type: ReviewResponseDto })
   update(
@@ -65,6 +67,8 @@ export class ReviewController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a review' })
   @ApiOkResponse({ type: ReviewResponseDto })
   remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {

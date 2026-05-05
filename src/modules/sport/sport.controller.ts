@@ -26,15 +26,11 @@ import { SportService } from './sport.service';
 
 @ApiTags('Sport')
 @Controller('sport')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(USER_ROLE.ADMIN)
-@ApiBearerAuth()
 export class SportController {
   constructor(private readonly sportService: SportService) {}
 
   //Allow all users to access this endpoint
   @Get()
-  @Roles()
   @ApiOperation({ summary: 'Get all sports' })
   @ApiOkResponse({ type: [SportDto] })
   findAll(@Query() query: SportQueryDto) {
@@ -42,7 +38,6 @@ export class SportController {
   }
 
   @Get(':id')
-  @Roles()
   @ApiOperation({ summary: 'Get a sport by id' })
   @ApiOkResponse({ type: SportDto })
   findOne(@Param('id') id: string) {
@@ -50,6 +45,9 @@ export class SportController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new sport' })
   @ApiOkResponse({ type: SportDto })
   create(@Body() sportDto: SportDto) {
@@ -57,6 +55,9 @@ export class SportController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a sport' })
   @ApiOkResponse({ type: SportDto })
   update(@Param('id') id: string, @Body() sportDto: SportDto) {
@@ -64,6 +65,9 @@ export class SportController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a sport' })
   @ApiOkResponse({ type: SportDto })
   remove(@Param('id') id: string) {
@@ -71,6 +75,9 @@ export class SportController {
   }
 
   @Post('bulk-delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin delete multiple sports' })
   bulkDelete(@Body() ids: BulkDeleteDto) {
     return this.sportService.bulkDelete(ids);

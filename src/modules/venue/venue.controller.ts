@@ -35,13 +35,13 @@ import { Serialize } from 'src/common/decorators/serialize.decorator';
 
 @ApiTags('Venue')
 @Controller('venue')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(USER_ROLE.ADMIN)
-@ApiBearerAuth()
 export class VenueController {
   constructor(private readonly venueService: VenueService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new venue' })
   @ApiOkResponse({ type: VenueResponseDto })
   create(@Body() createVenueDto: CreateVenueDto) {
@@ -49,8 +49,10 @@ export class VenueController {
   }
 
   @Post('search')
-  @Roles()
-  @Serialize(VenueResponseDto)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
+  @Serialize(FilteredVenueResponseDto)
   @ApiOperation({ summary: 'Get all venues' })
   @ApiOkResponse({ type: FilteredVenueResponseDto })
   findAll(@Body() filterBody: FilterBodyDto) {
@@ -59,7 +61,7 @@ export class VenueController {
 
   @Get()
   @Roles()
-  @Serialize(VenueResponseDto)
+  @Serialize(FilteredVenueResponseDto)
   @ApiOperation({ summary: 'Get all venues' })
   @ApiOkResponse({ type: FilteredVenueResponseDto })
   findAllByQuery(@Query() query: VenueQueryDto) {
@@ -67,7 +69,6 @@ export class VenueController {
   }
 
   @Get(':id')
-  @Roles()
   @ApiOperation({ summary: 'Get a venue by id' })
   @ApiOkResponse({ type: VenueResponseDto })
   findOne(@Param('id') id: string) {
@@ -75,7 +76,9 @@ export class VenueController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a venue' })
   @ApiOkResponse({ type: VenueResponseDto })
   update(
@@ -87,12 +90,18 @@ export class VenueController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a venue' })
   remove(@Param('id') id: string) {
     return this.venueService.remove(id);
   }
 
   @Post('bulk-delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLE.ADMIN)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin delete multiple venues' })
   bulkDelete(@Body() ids: BulkDeleteDto) {
     return this.venueService.bulkDelete(ids);

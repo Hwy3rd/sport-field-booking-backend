@@ -51,6 +51,9 @@ export class Venue {
   @Column({ type: 'text', nullable: true })
   description?: string;
 
+  @Column({ name: 'image_url', type: 'text', nullable: true })
+  imageUrl?: string;
+
   @Column({ name: 'operating_hours', type: 'jsonb' })
   operatingHours!: VenueOperatingHours;
 
