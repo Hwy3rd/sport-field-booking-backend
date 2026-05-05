@@ -351,14 +351,16 @@ export class CourtService {
 
       if (template.createTemplate !== false) {
         await this.timeSlotTemplateRepository.save(
-          this.timeSlotTemplateRepository.create({
-            courtId,
-            weekday: template.weekday,
-            startTime: template.startTime,
-            endTime: template.endTime,
-            price: template.price,
-            isActive: true,
-          }),
+          template.weekdays.map((weekday) =>
+            this.timeSlotTemplateRepository.create({
+              courtId,
+              weekday,
+              startTime: template.startTime,
+              endTime: template.endTime,
+              price: template.price,
+              isActive: true,
+            }),
+          ),
         );
       }
 
@@ -373,8 +375,8 @@ export class CourtService {
         date <= end;
         date.setDate(date.getDate() + 1)
       ) {
-        const weekday = ((date.getDay() + 6) % 7) + 1;
-        if (weekday !== template.weekday) continue;
+        const weekday = (((date.getDay() + 6) % 7) + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7;
+        if (!template.weekdays.includes(weekday)) continue;
 
         const isoDate = date.toISOString().split('T')[0];
         await this.ensureNoDuplicateSlot(

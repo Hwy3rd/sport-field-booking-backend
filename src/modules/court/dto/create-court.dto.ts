@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
   IsArray,
   IsBoolean,
   IsDateString,
@@ -58,10 +59,12 @@ class TemplateGenerationInputDto {
   @IsDateString()
   endDate!: string;
 
-  @ApiProperty({ enum: TIME_SLOT_WEEKDAY_VALUES })
+  @ApiProperty({ type: [Number], enum: TIME_SLOT_WEEKDAY_VALUES })
+  @IsArray()
+  @ArrayNotEmpty()
   @Type(() => Number)
-  @IsIn(TIME_SLOT_WEEKDAY_VALUES)
-  weekday!: TimeSlotWeekday;
+  @IsIn(TIME_SLOT_WEEKDAY_VALUES, { each: true })
+  weekdays!: TimeSlotWeekday[];
 
   @ApiProperty()
   @IsString()
