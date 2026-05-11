@@ -30,11 +30,14 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: clientUrl || [
-      'http://localhost:5173',
-      'http://192.168.0.2:5173',
-      'http://172.31.64.1:5173',
-    ],
+    origin: clientUrl
+      ? clientUrl.split(',').map((url) => url.trim())
+      : [
+          'http://localhost:5173',
+          'http://localhost:3000',
+          'http://192.168.0.2:5173',
+          'http://172.31.64.1:5173',
+        ],
     credentials: true,
   });
 
@@ -49,7 +52,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   console.log('✅ Server is logging on port', port);
   console.log('📃 API docs url:', `http://localhost:${port}/api/docs`);
