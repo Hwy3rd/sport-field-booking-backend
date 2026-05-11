@@ -83,4 +83,16 @@ export class TimeSlotController {
   bulkDelete(@Req() req: Request, @Body() ids: BulkDeleteDto) {
     return this.timeSlotService.bulkDelete(req.user as AuthUser, ids);
   }
+
+  @Post(':id/lock')
+  @ApiOperation({ summary: 'Lock a time slot' })
+  lock(@Param('id') id: string) {
+    return this.timeSlotService.lock(id);
+  }
+
+  @Post(':id/unlock')
+  @ApiOperation({ summary: 'Unlock a time slot' })
+  unlock(@Param('id') id: string) {
+    return this.timeSlotService.unlock(id);
+  }
 }

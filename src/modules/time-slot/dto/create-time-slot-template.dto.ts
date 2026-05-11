@@ -18,18 +18,28 @@ import {
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
 export class CreateTimeSlotTemplateDto {
-  @ApiProperty({ description: 'Court id', format: 'uuid' })
+  @ApiProperty({ description: 'Venue id', format: 'uuid' })
   @IsUUID()
-  courtId!: string;
+  venueId!: string;
+
+  @ApiProperty({ description: 'Name of the template (e.g. Standard, Weekend)' })
+  @IsString()
+  name!: string;
+
+  @ApiPropertyOptional({ description: 'Optional Court id to override venue template', format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  courtId?: string;
 
   @ApiProperty({
-    description: 'Weekday',
+    description: 'Weekdays array',
     enum: TIME_SLOT_WEEKDAY_VALUES,
+    isArray: true,
   })
   @Type(() => Number)
-  @IsInt()
-  @IsIn(TIME_SLOT_WEEKDAY_VALUES)
-  weekday!: TimeSlotWeekday;
+  @IsInt({ each: true })
+  @IsIn(TIME_SLOT_WEEKDAY_VALUES, { each: true })
+  weekdays!: TimeSlotWeekday[];
 
   @ApiProperty({ description: 'Start time in HH:mm or HH:mm:ss' })
   @IsString()

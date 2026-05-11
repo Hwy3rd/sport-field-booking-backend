@@ -3,6 +3,7 @@ import {
   type TimeSlotWeekday,
 } from 'src/libs/constants/time-slot.constant';
 import { Court } from 'src/modules/court/entities/court.entity';
+import { Venue } from 'src/modules/venue/entities/venue.entity';
 import {
   Column,
   CreateDateColumn,
@@ -16,21 +17,32 @@ import {
 
 @Entity('time_slot_templates')
 @Index(
-  'UQ_time_slot_templates_court_weekday_time',
-  ['courtId', 'weekday', 'startTime', 'endTime'],
+  'UQ_time_slot_templates_venue_name_weekday_time',
+  ['venueId', 'name', 'weekday', 'startTime', 'endTime'],
   { unique: true },
 )
 export class TimeSlotTemplate {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Index('IDX_time_slot_templates_court_id')
-  @Column({ name: 'court_id', type: 'uuid' })
-  courtId!: string;
+  @Index('IDX_time_slot_templates_venue_id')
+  @Column({ name: 'venue_id', type: 'uuid' })
+  venueId!: string;
 
-  @ManyToOne(() => Court, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Venue, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'venue_id' })
+  venue!: Venue;
+
+  @Column({ type: 'varchar', length: 255 })
+  name!: string;
+
+  @Index('IDX_time_slot_templates_court_id')
+  @Column({ name: 'court_id', type: 'uuid', nullable: true })
+  courtId?: string | null;
+
+  @ManyToOne(() => Court, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'court_id' })
-  court!: Court;
+  court?: Court | null;
 
   @Column({
     type: 'smallint',

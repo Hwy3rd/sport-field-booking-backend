@@ -50,6 +50,9 @@ export class Court {
   @Column({ name: 'image_url', type: 'text', nullable: true })
   imageUrl?: string | null;
 
+  @Column({ name: 'template_names', type: 'text', array: true, default: [] })
+  templateNames!: string[];
+
   @Column({
     type: 'enum',
     enum: COURT_STATUS_VALUES,

@@ -60,6 +60,11 @@ export interface FilterQueryOptions<T extends ObjectLiteral> {
    * Alias cho query builder, mặc định = tableName.
    */
   alias?: string;
+
+  /**
+   * Các relations cần lấy thêm (e.g. ['venue', 'court']).
+   */
+  relations?: string[];
 }
 
 export interface FilterQueryResult<T> {
@@ -97,6 +102,12 @@ export async function filterQuery<T extends ObjectLiteral>(
   const rangeFields = new Set(options.rangeFields ?? []);
   const exactFields = new Set(options.exactFields ?? []);
   const customHandlers = options.customHandlers ?? {};
+
+  if (options.relations) {
+    options.relations.forEach((rel) => {
+      qb.leftJoinAndSelect(`${alias}.${rel}`, rel);
+    });
+  }
 
   let paramIndex = 0;
   const nextParam = (key: string) =>

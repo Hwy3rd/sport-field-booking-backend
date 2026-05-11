@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { CourtService } from '../court/court.service';
+import { VenueService } from '../venue/venue.service';
 import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 import { filterQuery } from 'src/libs/helpers/filter-query.helper';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
@@ -19,13 +19,18 @@ export class TimeSlotTemplateService {
   constructor(
     @InjectRepository(TimeSlotTemplate)
     private readonly templateRepository: Repository<TimeSlotTemplate>,
-    private readonly courtService: CourtService,
+    private readonly venueService: VenueService,
   ) {}
 
   async create(authUser: AuthUser, dto: CreateTimeSlotTemplateDto) {
-    await this.courtService.findOneManageableByUser(authUser, dto.courtId);
-    const template = this.templateRepository.create(dto);
-    return await this.templateRepository.save(template);
+    await this.venueService.findOneManageableByUser(authUser, dto.venueId);
+    
+    const { weekdays, ...baseDto } = dto;
+    const templatesToSave = weekdays.map((weekday) =>
+      this.templateRepository.create({ ...baseDto, weekday })
+    );
+    
+    return await this.templateRepository.save(templatesToSave);
   }
 
   async findAll(query: TimeSlotTemplateQueryDto) {
@@ -35,12 +40,15 @@ export class TimeSlotTemplateService {
         current: query.current,
         limit: query.limit,
         filter: {
+          venueId: query.venueId,
           courtId: query.courtId,
+          name: query.name,
           weekday: query.weekday,
         },
       },
       {
         sort: { field: 'weekday', order: 'ASC' },
+        relations: ['venue', 'court'],
       },
     );
   }
@@ -54,8 +62,8 @@ export class TimeSlotTemplateService {
   async update(authUser: AuthUser, id: string, dto: UpdateTimeSlotTemplateDto) {
     const template = await this.templateRepository.findOne({ where: { id } });
     if (!template) throw new NotFoundException('Time slot template not found');
-    const courtId = dto.courtId ?? template.courtId;
-    await this.courtService.findOneManageableByUser(authUser, courtId);
+    const venueId = dto.venueId ?? template.venueId;
+    await this.venueService.findOneManageableByUser(authUser, venueId);
     Object.assign(template, dto);
     return await this.templateRepository.save(template);
   }
@@ -63,7 +71,7 @@ export class TimeSlotTemplateService {
   async remove(authUser: AuthUser, id: string) {
     const template = await this.templateRepository.findOne({ where: { id } });
     if (!template) throw new NotFoundException('Time slot template not found');
-    await this.courtService.findOneManageableByUser(authUser, template.courtId);
+    await this.venueService.findOneManageableByUser(authUser, template.venueId);
     await this.templateRepository.remove(template);
     return { id };
   }
@@ -76,11 +84,11 @@ export class TimeSlotTemplateService {
 
     const templates = await this.templateRepository.find({
       where: { id: In(uniqueIds) },
-      select: ['id', 'courtId'],
+      select: ['id', 'venueId'],
     });
-    const courtIds = [...new Set(templates.map((item) => item.courtId))];
-    for (const courtId of courtIds) {
-      await this.courtService.findOneManageableByUser(authUser, courtId);
+    const venueIds = [...new Set(templates.map((item) => item.venueId))];
+    for (const venueId of venueIds) {
+      await this.venueService.findOneManageableByUser(authUser, venueId);
     }
 
     const result = await this.templateRepository.delete({ id: In(uniqueIds) });
@@ -88,5 +96,16 @@ export class TimeSlotTemplateService {
       ids: uniqueIds,
       deletedCount: result.affected ?? 0,
     };
+  }
+
+  async getGroupNames(authUser: AuthUser, venueId: string) {
+    await this.venueService.findOneManageableByUser(authUser, venueId);
+    const result = await this.templateRepository
+      .createQueryBuilder('template')
+      .select('template.name', 'name')
+      .where('template.venue_id = :venueId', { venueId })
+      .groupBy('template.name')
+      .getRawMany();
+    return result.map((item) => item.name);
   }
 }

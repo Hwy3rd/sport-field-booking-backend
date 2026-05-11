@@ -11,6 +11,7 @@ import { CourtModule } from './modules/court/court.module';
 import { TimeSlotModule } from './modules/time-slot/time-slot.module';
 import { BookingModule } from './modules/booking/booking.module';
 import { ReviewModule } from './modules/review/review.module';
+import { PaymentModule } from './modules/payment/payment.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ReviewModule } from './modules/review/review.module';
     TimeSlotModule,
     BookingModule,
     ReviewModule,
+    PaymentModule,
   ],
   controllers: [],
   providers: [SeedOnBootstrapService],

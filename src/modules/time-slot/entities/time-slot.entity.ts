@@ -59,6 +59,9 @@ export class TimeSlot {
   })
   status!: TimeSlotStatus;
 
+  @Column({ name: 'locked_at', type: 'timestamptz', nullable: true })
+  lockedAt?: Date | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

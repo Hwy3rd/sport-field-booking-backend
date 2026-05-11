@@ -43,6 +43,35 @@ export class CourtService {
     private readonly timeSlotTemplateRepository: Repository<TimeSlotTemplate>,
   ) {}
 
+  private async checkTemplateOverlap(venueId: string, templateNames?: string[]) {
+    if (!templateNames || templateNames.length === 0) return;
+    const templates = await this.timeSlotTemplateRepository.find({
+      where: {
+        venueId,
+        name: In(templateNames),
+        isActive: true,
+      },
+    });
+
+    const byWeekday = new Map<number, TimeSlotTemplate[]>();
+    for (const t of templates) {
+      if (!byWeekday.has(t.weekday)) byWeekday.set(t.weekday, []);
+      byWeekday.get(t.weekday)!.push(t);
+    }
+
+    for (const [weekday, dayTemplates] of byWeekday) {
+      for (let i = 0; i < dayTemplates.length; i++) {
+        for (let j = i + 1; j < dayTemplates.length; j++) {
+          const t1 = dayTemplates[i];
+          const t2 = dayTemplates[j];
+          if (t1.startTime < t2.endTime && t1.endTime > t2.startTime) {
+            throw new BadRequestException('Selected templates have overlapping times.');
+          }
+        }
+      }
+    }
+  }
+
   async create(createCourtDto: CreateCourtDto) {
     const venue = await this.venueService.findOneActiveById(
       createCourtDto.venueId,
@@ -67,15 +96,25 @@ export class CourtService {
       );
     }
 
-    const { timeSlotConfig, ...courtData } = createCourtDto;
+    const { templateNames, manualTimeSlots, ...courtData } = createCourtDto;
+
+    await this.checkTemplateOverlap(createCourtDto.venueId, templateNames);
 
     const newCourt = this.courtRepository.create({
       ...courtData,
+      templateNames: templateNames ?? [],
       status: COURT_STATUS.ACTIVE,
     });
 
     const savedCourt = await this.courtRepository.save(newCourt);
-    await this.applyTimeSlotConfig(savedCourt.id, venue.operatingHours, timeSlotConfig);
+
+    await this.timeSlotService.bulkGenerateForCourt(
+      savedCourt.id,
+      savedCourt.venueId,
+      templateNames,
+      manualTimeSlots,
+    );
+
     return savedCourt;
   }
 
@@ -219,15 +258,26 @@ export class CourtService {
       );
     }
 
-    const { timeSlotConfig, ...courtData } = updateCourtDto;
+    const { templateNames, manualTimeSlots, ...courtData } = updateCourtDto;
+
+    if (templateNames !== undefined) {
+      await this.checkTemplateOverlap(targetVenueId, templateNames);
+      existingCourt.templateNames = templateNames;
+    }
+
     Object.assign(existingCourt, courtData);
     const updatedCourt = await this.courtRepository.save(existingCourt);
-    const venue = await this.venueService.findOneActiveById(updatedCourt.venueId);
-    await this.applyTimeSlotConfig(
-      updatedCourt.id,
-      venue?.operatingHours,
-      timeSlotConfig,
-    );
+
+    // Generate new time slots if any new templates or manual slots are provided
+    if (templateNames !== undefined || (manualTimeSlots && manualTimeSlots.length > 0)) {
+      await this.timeSlotService.bulkGenerateForCourt(
+        updatedCourt.id,
+        updatedCourt.venueId,
+        templateNames !== undefined ? templateNames : updatedCourt.templateNames,
+        manualTimeSlots,
+      );
+    }
+
     return updatedCourt;
   }
 
@@ -264,139 +314,4 @@ export class CourtService {
     };
   }
 
-  private normalizeTime(time: string): string {
-    return time.length === 5 ? `${time}:00` : time;
-  }
-
-  private assertTimeInsideOperatingHours(
-    startTime: string,
-    endTime: string,
-    operatingHours?: { startTime?: string; endTime?: string } | null,
-  ) {
-    if (!operatingHours?.startTime || !operatingHours?.endTime) return;
-    const venueStart = this.normalizeTime(operatingHours.startTime);
-    const venueEnd = this.normalizeTime(operatingHours.endTime);
-    const slotStart = this.normalizeTime(startTime);
-    const slotEnd = this.normalizeTime(endTime);
-
-    if (slotStart < venueStart || slotEnd > venueEnd || slotStart >= slotEnd) {
-      throw new BadRequestException(
-        `Time slot ${startTime}-${endTime} is outside venue operating hours ${operatingHours.startTime}-${operatingHours.endTime}`,
-      );
-    }
-  }
-
-  private async ensureNoDuplicateSlot(
-    courtId: string,
-    date: string,
-    startTime: string,
-    endTime: string,
-  ) {
-    const existing = await this.timeSlotRepository.findOne({
-      where: {
-        courtId,
-        date: new Date(date),
-        startTime,
-        endTime,
-      },
-      select: ['id'],
-    });
-    if (existing) {
-      throw new BadRequestException(
-        `Duplicate time slot for ${date} ${startTime}-${endTime}`,
-      );
-    }
-  }
-
-  private async applyTimeSlotConfig(
-    courtId: string,
-    operatingHours: { startTime?: string; endTime?: string } | null | undefined,
-    config: CreateCourtDto['timeSlotConfig'] | UpdateCourtDto['timeSlotConfig'],
-  ) {
-    if (!config) return;
-
-    if (config.manualSlots?.length) {
-      for (const slot of config.manualSlots) {
-        this.assertTimeInsideOperatingHours(
-          slot.startTime,
-          slot.endTime,
-          operatingHours,
-        );
-        await this.ensureNoDuplicateSlot(
-          courtId,
-          slot.date,
-          slot.startTime,
-          slot.endTime,
-        );
-        await this.timeSlotRepository.save(
-          this.timeSlotRepository.create({
-            courtId,
-            date: slot.date,
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            price: slot.price,
-            status: slot.status ?? TIME_SLOT_STATUS.AVAILABLE,
-          }),
-        );
-      }
-    }
-
-    if (config.templateGeneration) {
-      const template = config.templateGeneration;
-      this.assertTimeInsideOperatingHours(
-        template.startTime,
-        template.endTime,
-        operatingHours,
-      );
-
-      if (template.createTemplate !== false) {
-        await this.timeSlotTemplateRepository.save(
-          template.weekdays.map((weekday) =>
-            this.timeSlotTemplateRepository.create({
-              courtId,
-              weekday,
-              startTime: template.startTime,
-              endTime: template.endTime,
-              price: template.price,
-              isActive: true,
-            }),
-          ),
-        );
-      }
-
-      const start = new Date(`${template.startDate}T00:00:00`);
-      const end = new Date(`${template.endDate}T00:00:00`);
-      if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
-        throw new BadRequestException('Invalid template date range');
-      }
-
-      for (
-        const date = new Date(start);
-        date <= end;
-        date.setDate(date.getDate() + 1)
-      ) {
-        const weekday = (((date.getDay() + 6) % 7) + 1) as 1 | 2 | 3 | 4 | 5 | 6 | 7;
-        if (!template.weekdays.includes(weekday)) continue;
-
-        const isoDate = date.toISOString().split('T')[0];
-        await this.ensureNoDuplicateSlot(
-          courtId,
-          isoDate,
-          template.startTime,
-          template.endTime,
-        );
-
-        await this.timeSlotRepository.save(
-          this.timeSlotRepository.create({
-            courtId,
-            date: isoDate,
-            startTime: template.startTime,
-            endTime: template.endTime,
-            price: template.price,
-            status: TIME_SLOT_STATUS.AVAILABLE as TimeSlotStatus,
-          }),
-        );
-      }
-    }
-  }
 }

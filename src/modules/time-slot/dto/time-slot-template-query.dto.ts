@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsOptional, IsUUID } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 import {
   TIME_SLOT_WEEKDAY_VALUES,
   type TimeSlotWeekday,
@@ -8,10 +8,20 @@ import {
 import { FilterQueryDto } from 'src/libs/dtos/filter-query.dto';
 
 export class TimeSlotTemplateQueryDto extends FilterQueryDto {
+  @ApiPropertyOptional({ description: 'Filter by venue id', format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  venueId?: string;
+
   @ApiPropertyOptional({ description: 'Filter by court id', format: 'uuid' })
   @IsOptional()
   @IsUUID()
   courtId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by template name' })
+  @IsOptional()
+  @IsString()
+  name?: string;
 
   @ApiPropertyOptional({
     description: 'Filter by weekday',
