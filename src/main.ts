@@ -29,15 +29,20 @@ async function bootstrap() {
     }),
   );
 
+  // app.enableCors({
+  //   origin: clientUrl
+  //     ? clientUrl.split(',').map((url) => url.trim())
+  //     : [
+  //         'http://localhost:5173',
+  //         'http://localhost:3000',
+  //         'http://192.168.0.2:5173',
+  //         'http://172.31.64.1:5173',
+  //       ],
+  //   credentials: true,
+  // });
+
   app.enableCors({
-    origin: clientUrl
-      ? clientUrl.split(',').map((url) => url.trim())
-      : [
-          'http://localhost:5173',
-          'http://localhost:3000',
-          'http://192.168.0.2:5173',
-          'http://172.31.64.1:5173',
-        ],
+    origin: '*',
     credentials: true,
   });
 
