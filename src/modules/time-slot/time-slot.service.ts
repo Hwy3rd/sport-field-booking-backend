@@ -10,6 +10,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreateTimeSlotDto } from './dto/create-time-slot.dto';
 import { UpdateTimeSlotDto } from './dto/update-time-slot.dto';
 import { TimeSlot } from './entities/time-slot.entity';
+import { TimeSlotTemplate } from './entities/time-slot-template.entity';
+import { CreateManualSlotDto } from '../court/dto/create-manual-slot.dto';
 import { In, Repository } from 'typeorm';
 import { TIME_SLOT_STATUS } from 'src/libs/constants/time-slot.constant';
 import { filterQuery } from 'src/libs/helpers/filter-query.helper';
@@ -24,6 +26,8 @@ export class TimeSlotService {
   constructor(
     @InjectRepository(TimeSlot)
     private readonly timeSlotRepository: Repository<TimeSlot>,
+    @InjectRepository(TimeSlotTemplate)
+    private readonly templateRepository: Repository<TimeSlotTemplate>,
     @Inject(forwardRef(() => CourtService))
     private readonly courtService: CourtService,
   ) {}
@@ -39,6 +43,108 @@ export class TimeSlotService {
       status: createTimeSlotDto.status ?? TIME_SLOT_STATUS.AVAILABLE,
     });
     return await this.timeSlotRepository.save(timeSlot);
+  }
+
+  async bulkGenerateForCourt(
+    courtId: string,
+    venueId: string,
+    templateNames?: string[],
+    manualTimeSlots?: CreateManualSlotDto[],
+  ) {
+    if (manualTimeSlots && manualTimeSlots.length > 0) {
+      for (const slot of manualTimeSlots) {
+        const overlap = await this.timeSlotRepository
+          .createQueryBuilder('ts')
+          .where('ts.court_id = :courtId', { courtId })
+          .andWhere('ts.date = :date', { date: slot.date })
+          .andWhere('ts.start_time < :endTime', { endTime: slot.endTime })
+          .andWhere('ts.end_time > :startTime', { startTime: slot.startTime })
+          .getOne();
+
+        if (overlap) {
+          throw new BadRequestException(
+            `Manual time slot on ${slot.date} from ${slot.startTime} to ${slot.endTime} overlaps with an existing slot.`,
+          );
+        }
+
+        const newSlot = this.timeSlotRepository.create({
+          courtId,
+          date: slot.date,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          price: slot.price,
+          status: TIME_SLOT_STATUS.AVAILABLE,
+          templateId: null,
+        });
+        await this.timeSlotRepository.save(newSlot);
+      }
+    }
+
+    if (templateNames && templateNames.length > 0) {
+      const templates = await this.templateRepository.find({
+        where: {
+          venueId,
+          name: In(templateNames),
+          isActive: true,
+        },
+      });
+
+      if (templates.length > 0) {
+        const daysInAdvance = 14;
+        const today = new Date();
+        const slotsToInsert: TimeSlot[] = [];
+
+        for (let i = 0; i < daysInAdvance; i++) {
+          const targetDate = new Date(today);
+          targetDate.setDate(today.getDate() + i);
+          const isoDate = targetDate.toISOString().split('T')[0];
+          const weekday = (((targetDate.getDay() + 6) % 7) + 1);
+
+          const dayTemplates = templates.filter(
+            (t) => t.weekday === weekday && (t.courtId === null || t.courtId === courtId),
+          );
+
+          const uniqueTemplates: TimeSlotTemplate[] = [];
+          for (const t of dayTemplates) {
+            const isOverride = t.courtId !== null;
+            const hasOverride = dayTemplates.some(
+              (dt) => dt.courtId === courtId && dt.startTime === t.startTime && dt.endTime === t.endTime,
+            );
+            if (isOverride || !hasOverride) {
+              uniqueTemplates.push(t);
+            }
+          }
+
+          for (const template of uniqueTemplates) {
+            const overlap = await this.timeSlotRepository
+              .createQueryBuilder('ts')
+              .where('ts.court_id = :courtId', { courtId })
+              .andWhere('ts.date = :date', { date: isoDate })
+              .andWhere('ts.start_time < :endTime', { endTime: template.endTime })
+              .andWhere('ts.end_time > :startTime', { startTime: template.startTime })
+              .getOne();
+
+            if (!overlap) {
+              slotsToInsert.push(
+                this.timeSlotRepository.create({
+                  courtId,
+                  templateId: template.id,
+                  date: isoDate,
+                  startTime: template.startTime,
+                  endTime: template.endTime,
+                  price: template.price,
+                  status: TIME_SLOT_STATUS.AVAILABLE,
+                }),
+              );
+            }
+          }
+        }
+
+        if (slotsToInsert.length > 0) {
+          await this.timeSlotRepository.save(slotsToInsert, { chunk: 100 });
+        }
+      }
+    }
   }
 
   async findAll(query: TimeSlotQueryDto) {
@@ -166,5 +272,27 @@ export class TimeSlotService {
       ids: uniqueIds,
       deletedCount: result.affected ?? 0,
     };
+  }
+
+  async lock(id: string) {
+    const timeSlot = await this.timeSlotRepository.findOne({ where: { id } });
+    if (!timeSlot) throw new NotFoundException('Time slot not found');
+    if (timeSlot.status !== TIME_SLOT_STATUS.AVAILABLE) {
+      throw new BadRequestException('Time slot is not available');
+    }
+    timeSlot.status = TIME_SLOT_STATUS.BLOCKED;
+    timeSlot.lockedAt = new Date();
+    return await this.timeSlotRepository.save(timeSlot);
+  }
+
+  async unlock(id: string) {
+    const timeSlot = await this.timeSlotRepository.findOne({ where: { id } });
+    if (!timeSlot) throw new NotFoundException('Time slot not found');
+    if (timeSlot.status !== TIME_SLOT_STATUS.BLOCKED) {
+      return timeSlot;
+    }
+    timeSlot.status = TIME_SLOT_STATUS.AVAILABLE;
+    timeSlot.lockedAt = null;
+    return await this.timeSlotRepository.save(timeSlot);
   }
 }

@@ -102,6 +102,17 @@ export class VenueService {
     return venue;
   }
 
+  async findOneManageableByUser(authUser: AuthUser, id: string) {
+    const venue = await this.findOneById(id);
+    if (
+      authUser.role === USER_ROLE.OWNER &&
+      venue.ownerId !== authUser.id
+    ) {
+      throw new ForbiddenException('You can only manage your own venue');
+    }
+    return venue;
+  }
+
   async findAllByFilter(filterBody: FilterBodyDto) {
     const safeFilterBody: FilterBodyDto = {
       ...filterBody,

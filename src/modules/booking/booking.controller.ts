@@ -43,7 +43,7 @@ export class BookingController {
   constructor(private readonly bookingService: BookingService) {}
 
   @Get('history')
-  @Serialize(BookingResponseDto)
+  @Serialize(FilteredBookingResponseDto)
   @ApiOperation({ summary: 'Get booking history' })
   @ApiOkResponse({ type: [BookingResponseDto] })
   findHistory(@GetUserId() userId: string, @Query() query: BookingQueryDto) {

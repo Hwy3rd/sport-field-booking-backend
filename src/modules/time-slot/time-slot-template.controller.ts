@@ -50,6 +50,12 @@ export class TimeSlotTemplateController {
     return this.service.findAll(query);
   }
 
+  @Get('group-names/:venueId')
+  @ApiOperation({ summary: 'Get template group names for a venue' })
+  getGroupNames(@Req() req: Request, @Param('venueId') venueId: string) {
+    return this.service.getGroupNames(req.user as AuthUser, venueId);
+  }
+
   @Get(':id')
   @Roles()
   @ApiOperation({ summary: 'Get one time slot template' })
