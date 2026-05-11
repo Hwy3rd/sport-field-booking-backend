@@ -31,7 +31,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: clientUrl
-      ? clientUrl.split(',').map((url) => url.trim())
+      ? clientUrl
       : [
           'http://localhost:5173',
           'http://localhost:3000',
