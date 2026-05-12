@@ -30,22 +30,35 @@ export class VenueService {
   ) {}
 
   async findAllByQuery(query: VenueQueryDto) {
-    const { name, address, startTime, endTime } = query;
+    const { name, address, startTime, endTime, ownerId, status } = query;
     const safeQuery = {
       current: query.current,
       limit: query.limit,
       filter: {
         name,
         address,
-        status: VENUE_STATUS.ACTIVE,
         startTime,
         endTime,
+        ownerId,
+        status,
       },
     };
 
     const venues = await filterQuery(this.venueRepository, safeQuery, {
       regexFields: ['name', 'address'],
       customHandlers: {
+        status: (qb, value, alias) => {
+          if (value) {
+            qb.andWhere(`${alias}.status = :targetStatus`, {
+              targetStatus: String(value),
+            });
+          } else {
+            // Dành cho public user, mặc định là ACTIVE
+            qb.andWhere(`${alias}.status = :targetStatus`, {
+              targetStatus: VENUE_STATUS.ACTIVE,
+            });
+          }
+        },
         startTime: (qb, value, alias) => {
           qb.andWhere(
             `:startTime < ((${alias}.operating_hours->>'endTime')::time)`,

@@ -87,6 +87,7 @@ export class BookingService {
             'timeSlot.endTime',
             'timeSlot.price',
             'timeSlot.status',
+            'timeSlot.lockedAt',
           ])
           .getMany();
 
@@ -94,9 +95,22 @@ export class BookingService {
           throw new NotFoundException('Time slots not found');
         }
 
-        const unavailableSlot = timeSlots.find(
-          (slot) => slot.status !== TIME_SLOT_STATUS.AVAILABLE,
-        );
+        const unavailableSlot = timeSlots.find((slot) => {
+          // Allow available slots
+          if (slot.status === TIME_SLOT_STATUS.AVAILABLE) return false;
+
+          // Allow slots temporarily locked/reserved by users (has lockedAt date)
+          if (
+            slot.status === TIME_SLOT_STATUS.BLOCKED &&
+            slot.lockedAt !== null
+          ) {
+            return false;
+          }
+
+          // All other states are blocked
+          return true;
+        });
+
         if (unavailableSlot) {
           throw new BadRequestException(
             `Time slot ${unavailableSlot.id} is not available`,
@@ -128,7 +142,7 @@ export class BookingService {
 
         await timeSlotRepository.update(
           { id: In(sortedSlotIds) },
-          { status: TIME_SLOT_STATUS.BOOKED },
+          { status: TIME_SLOT_STATUS.BOOKED, lockedAt: null },
         );
 
         return savedBooking.id;

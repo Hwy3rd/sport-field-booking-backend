@@ -10,5 +10,6 @@ import { TimeSlotModule } from '../time-slot/time-slot.module';
   imports: [TypeOrmModule.forFeature([Booking, BookingItem]), TimeSlotModule],
   controllers: [BookingController],
   providers: [BookingService],
+  exports: [BookingService, TypeOrmModule],
 })
 export class BookingModule {}
