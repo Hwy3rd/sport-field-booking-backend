@@ -87,8 +87,10 @@ export class PaymentService {
   async verifyReturnUrl(query: any) {
     try {
       const verifyResult = await this.vnpayService.verifyReturnUrl(query);
+      this.logger.log('VNPay VerifyReturnUrl Result:', verifyResult);
       return verifyResult;
     } catch (error) {
+      this.logger.error('VNPay VerifyReturnUrl Error:', error);
       throw new Error('Chữ ký thanh toán không hợp lệ');
     }
   }
@@ -118,6 +120,10 @@ export class PaymentService {
   }
 
   async processPaymentStatusUpdate(query: any) {
+    this.logger.log(
+      'Executing processPaymentStatusUpdate for TxnRef:',
+      query.vnp_TxnRef,
+    );
     const txnRef = query.vnp_TxnRef;
     const vnp_ResponseCode = query.vnp_ResponseCode;
     const amount = Number(query.vnp_Amount) / 100;

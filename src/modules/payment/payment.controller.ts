@@ -70,13 +70,19 @@ export class PaymentController {
     const bookingId = payment ? payment.bookingId : 'unknown';
 
     if (verifyResult.isSuccess) {
+      // Tự động đồng bộ trạng thái giao dịch vào CSDL ngay lập tức tại đây
+      // Giúp UX người dùng siêu tốc, chạy được trên cả localhost lẫn môi trường tunnel/cloud
+      await this.paymentService.processPaymentStatusUpdate(query);
+
       // Redirect về trang chủ với query params thông báo thành công
       return res.redirect(
         `${clientUrl}/?payment_status=success&bookingId=${bookingId}`,
       );
     } else {
-      // Redirect về trang chủ với query params thông báo thất bại 
-      return res.redirect(`${clientUrl}/?payment_status=failed&bookingId=${bookingId}`);
+      // Redirect về trang chủ với query params thông báo thất bại
+      return res.redirect(
+        `${clientUrl}/?payment_status=failed&bookingId=${bookingId}`,
+      );
     }
   }
 
