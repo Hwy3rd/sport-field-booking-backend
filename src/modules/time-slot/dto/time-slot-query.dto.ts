@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { IsDateString, IsIn, IsOptional, IsUUID } from 'class-validator';
 import {
   TIME_SLOT_STATUS_VALUES,
@@ -12,6 +12,7 @@ export class TimeSlotQueryDto extends FilterQueryDto {
     description: 'Filter by court id',
     format: 'uuid',
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsUUID()
   courtId?: string;
@@ -20,6 +21,7 @@ export class TimeSlotQueryDto extends FilterQueryDto {
     description: 'Filter by template id',
     format: 'uuid',
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsUUID()
   templateId?: string;
@@ -28,6 +30,7 @@ export class TimeSlotQueryDto extends FilterQueryDto {
     description: 'Filter by slot date',
     example: '2026-05-01',
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsDateString()
   date?: string;
@@ -36,6 +39,7 @@ export class TimeSlotQueryDto extends FilterQueryDto {
     description: 'Filter by slot status',
     enum: TIME_SLOT_STATUS_VALUES,
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @Type(() => String)
   @IsIn(TIME_SLOT_STATUS_VALUES)

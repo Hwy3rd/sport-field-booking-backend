@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import {
   IsInt,
   IsOptional,
@@ -25,6 +25,7 @@ export class CourtQueryDto extends FilterQueryDto {
     description: 'Sport id to filter courts',
     format: 'uuid',
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsUUID()
   sportId?: string;
@@ -33,6 +34,7 @@ export class CourtQueryDto extends FilterQueryDto {
     description: 'Venue id to filter courts',
     format: 'uuid',
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @IsOptional()
   @IsUUID()
   venueId?: string;
