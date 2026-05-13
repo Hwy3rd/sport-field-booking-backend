@@ -85,18 +85,32 @@ export class PaymentService {
   }
 
   async verifyReturnUrl(query: any) {
+    if (!query || Object.keys(query).length === 0 || !query.vnp_TxnRef) {
+      this.logger.warn('Received invalid/empty Return request.');
+      return {
+        isSuccess: false,
+        message: 'Tham số yêu cầu không hợp lệ',
+      };
+    }
+
     try {
       const verifyResult = await this.vnpayService.verifyReturnUrl(query);
       this.logger.log('VNPay VerifyReturnUrl Result:', verifyResult);
       return verifyResult;
     } catch (error) {
       this.logger.error('VNPay VerifyReturnUrl Error:', error);
-      throw new Error('Chữ ký thanh toán không hợp lệ');
+      return {
+        isSuccess: false,
+        message: 'Chữ ký thanh toán không hợp lệ',
+      };
     }
   }
 
   async getPaymentByTxnRef(txnRef: string) {
     this.logger.log('Payment Ref: ', txnRef);
+    if (!txnRef) {
+      return null;
+    }
     return this.paymentRepository.findOne({
       where: { txnRef },
     });
@@ -104,6 +118,12 @@ export class PaymentService {
 
   async verifyIpnCall(query: any) {
     this.logger.log('Starting IPN verification process...', query);
+
+    if (!query || Object.keys(query).length === 0 || !query.vnp_TxnRef) {
+      this.logger.warn('Received invalid/empty IPN request. Ignoring.');
+      return { RspCode: '99', Message: 'Invalid request parameters' };
+    }
+
     try {
       const verifyResult = await this.vnpayService.verifyIpnCall(query);
 

@@ -4,10 +4,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { Brackets, DataSource, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { VenueService } from '../venue/venue.service';
 import type { AuthUser } from 'src/libs/types/jwt-payload.type';
-import { filterQuery } from 'src/libs/helpers/filter-query.helper';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
 import { TimeSlotTemplate } from './entities/time-slot-template.entity';
 import { CreateTimeSlotTemplateDto } from './dto/create-time-slot-template.dto';
@@ -20,6 +19,7 @@ export class TimeSlotTemplateService {
     @InjectRepository(TimeSlotTemplate)
     private readonly templateRepository: Repository<TimeSlotTemplate>,
     private readonly venueService: VenueService,
+    private readonly dataSource: DataSource, // We need inject dataSource to do raw count query if needed
   ) {}
 
   async create(authUser: AuthUser, dto: CreateTimeSlotTemplateDto) {
@@ -34,23 +34,94 @@ export class TimeSlotTemplateService {
   }
 
   async findAll(query: TimeSlotTemplateQueryDto) {
-    return await filterQuery(
-      this.templateRepository,
-      {
-        current: query.current,
-        limit: query.limit,
-        filter: {
-          venueId: query.venueId,
-          courtId: query.courtId,
-          name: query.name,
-          weekday: query.weekday,
-        },
-      },
-      {
-        sort: { field: 'weekday', order: 'ASC' },
-        relations: ['venue', 'court'],
-      },
+    const current = Math.max(1, Number(query.current) || 1);
+    const limit = Math.max(1, Number(query.limit) || 10);
+
+    // Helper applying standard filters on any query builder to reduce redundancy
+    const applyFilters = (qb: SelectQueryBuilder<TimeSlotTemplate>) => {
+      if (query.venueId) qb.andWhere('template.venueId = :venueId', { venueId: query.venueId });
+      if (query.courtId) qb.andWhere('template.courtId = :courtId', { courtId: query.courtId });
+      if (query.name) qb.andWhere('template.name ILIKE :name', { name: `%${query.name}%` });
+      if (query.weekday) qb.andWhere('template.weekday = :weekday', { weekday: query.weekday });
+    };
+
+    // 1. Query distinct logical template groups
+    const groupQb = this.templateRepository
+      .createQueryBuilder('template')
+      .select([
+        'template.venueId AS "venueId"',
+        'template.name AS "name"',
+        'template.courtId AS "courtId"',
+      ])
+      .groupBy('template.venueId')
+      .addGroupBy('template.name')
+      .addGroupBy('template.courtId')
+      .orderBy('template.name', 'ASC');
+    
+    applyFilters(groupQb);
+
+    // 2. Fetch group count via raw subquery
+    const countResult = await this.dataSource
+      .createQueryBuilder()
+      .select('COUNT(*)', 'total')
+      .from(`(${groupQb.getQuery()})`, 'groups')
+      .setParameters(groupQb.getParameters())
+      .getRawOne();
+
+    const total = Number(countResult?.total || 0);
+    const paginatedGroups = await groupQb
+      .offset((current - 1) * limit)
+      .limit(limit)
+      .getRawMany();
+
+    if (paginatedGroups.length === 0) {
+      return {
+        items: [],
+        total,
+        current,
+        limit,
+        totalPages: limit > 0 ? Math.ceil(total / limit) : 0,
+      };
+    }
+
+    // 3. Retrieve all concrete records belonging to the selected subset
+    const itemsQb = this.templateRepository
+      .createQueryBuilder('template')
+      .leftJoinAndSelect('template.venue', 'venue')
+      .leftJoinAndSelect('template.court', 'court')
+      .orderBy('template.weekday', 'ASC');
+
+    applyFilters(itemsQb);
+
+    itemsQb.andWhere(
+      new Brackets((qb) => {
+        paginatedGroups.forEach((group, index) => {
+          const clause = `(template.venueId = :vId_${index} AND template.name = :name_${index} AND template.courtId ${
+            group.courtId ? `= :cId_${index}` : 'IS NULL'
+          })`;
+
+          const params: Record<string, any> = {
+            [`vId_${index}`]: group.venueId,
+            [`name_${index}`]: group.name,
+          };
+          if (group.courtId) {
+            params[`cId_${index}`] = group.courtId;
+          }
+
+          index === 0 ? qb.where(clause, params) : qb.orWhere(clause, params);
+        });
+      }),
     );
+
+    const items = await itemsQb.getMany();
+
+    return {
+      items,
+      total,
+      current,
+      limit,
+      totalPages: limit > 0 ? Math.ceil(total / limit) : 0,
+    };
   }
 
   async findOne(id: string) {
