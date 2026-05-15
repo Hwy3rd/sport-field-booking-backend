@@ -10,6 +10,7 @@ import {
   type BookingStatus,
 } from 'src/libs/constants/booking.constant';
 import { TIME_SLOT_STATUS } from 'src/libs/constants/time-slot.constant';
+import { USER_ROLE } from 'src/libs/constants/user.constant';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
 import { FilterBodyDto } from 'src/libs/dtos/filter-body.dto';
 import {
@@ -158,7 +159,10 @@ export class BookingService {
       throw error;
     }
 
-    return await this.findOne({ id: authUser.id, role: authUser.role }, savedBookingId);
+    return await this.findOne(
+      { id: authUser.id, role: authUser.role },
+      savedBookingId,
+    );
   }
 
   async findAllByFilter(query: FilterBodyDto, userId?: string) {
@@ -195,14 +199,16 @@ export class BookingService {
     return await filterQuery(this.bookingRepository, safeQuery, filterOptions);
   }
 
-  async findOne(user: { id: string, role?: string }, id: string) {
+  async findOne(user: { id: string; role?: string }, id: string) {
     const booking = await this.bookingRepository.findOne({
       where: { id, isDeleted: false },
       relations: { items: true },
     });
     if (!booking) throw new NotFoundException('Booking not found');
-    
-    const isAdminOrOwner = ['ADMIN', 'OWNER'].includes(user.role ?? '');
+
+    const isAdminOrOwner = [USER_ROLE.ADMIN, USER_ROLE.OWNER].includes(
+      user.role as any,
+    );
     if (!isAdminOrOwner && booking.userId !== user.id) {
       throw new ForbiddenException(
         'You are not allowed to access this booking',
