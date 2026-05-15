@@ -158,7 +158,7 @@ export class BookingService {
       throw error;
     }
 
-    return await this.findOne(authUser.id, savedBookingId);
+    return await this.findOne({ id: authUser.id, role: authUser.role }, savedBookingId);
   }
 
   async findAllByFilter(query: FilterBodyDto, userId?: string) {
@@ -195,16 +195,19 @@ export class BookingService {
     return await filterQuery(this.bookingRepository, safeQuery, filterOptions);
   }
 
-  async findOne(userId: string, id: string) {
+  async findOne(user: { id: string, role?: string }, id: string) {
     const booking = await this.bookingRepository.findOne({
       where: { id, isDeleted: false },
       relations: { items: true },
     });
     if (!booking) throw new NotFoundException('Booking not found');
-    if (booking.userId !== userId)
+    
+    const isAdminOrOwner = ['ADMIN', 'OWNER'].includes(user.role ?? '');
+    if (!isAdminOrOwner && booking.userId !== user.id) {
       throw new ForbiddenException(
         'You are not allowed to access this booking',
       );
+    }
 
     return booking;
   }

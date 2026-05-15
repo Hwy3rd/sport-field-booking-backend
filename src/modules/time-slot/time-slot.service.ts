@@ -159,9 +159,30 @@ export class TimeSlotService {
       },
     };
 
-    return await filterQuery(this.timeSlotRepository, filterData, {
+    const result = await filterQuery(this.timeSlotRepository, filterData, {
       sort: { field: 'date', order: 'ASC' },
     });
+
+    const items = result.items ?? [];
+    if (items.length === 0) return result;
+
+    const slotsWithRelations = await this.timeSlotRepository.find({
+      where: { id: In(items.map((item) => item.id)) },
+      relations: { court: { venue: true } },
+    });
+    const relationMap = new Map(slotsWithRelations.map((item) => [item.id, item]));
+
+    return {
+      ...result,
+      items: items.map((item) => {
+        const related = relationMap.get(item.id);
+        if (!related) return item;
+        return {
+          ...item,
+          court: related.court,
+        };
+      }),
+    };
   }
 
   async findOne(id: string) {
