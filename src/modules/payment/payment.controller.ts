@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Param,
   Post,
   Query,
   Req,
@@ -90,5 +91,32 @@ export class PaymentController {
   @ApiOperation({ summary: 'VNPay IPN endpoint (Server-to-Server webhook)' })
   async vnpayIpn(@Query() query: any) {
     return await this.paymentService.verifyIpnCall(query);
+  }
+
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Post('booking/:bookingId/refund')
+  @ApiOperation({ summary: 'Request 100% VNPay refund for a confirmed booking' })
+  async refundBooking(
+    @Req() req: Request,
+    @GetUserId() userId: string,
+    @Param('bookingId') bookingId: string,
+  ) {
+    let ipAddr =
+      (req.headers['x-forwarded-for'] as string) ||
+      req.socket.remoteAddress ||
+      '127.0.0.1';
+
+    // Xử lý IPv6 local để tuân thủ chuẩn IPv4 khắt khe của VNPay
+    if (ipAddr === '::1' || ipAddr.includes('::ffff:')) {
+      ipAddr = '127.0.0.1';
+    }
+
+    return await this.paymentService.refundBooking(
+      userId,
+      bookingId,
+      ipAddr,
+      userId,
+    );
   }
 }

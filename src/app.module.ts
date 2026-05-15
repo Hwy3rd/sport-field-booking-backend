@@ -12,6 +12,7 @@ import { TimeSlotModule } from './modules/time-slot/time-slot.module';
 import { BookingModule } from './modules/booking/booking.module';
 import { ReviewModule } from './modules/review/review.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { StatisticModule } from './modules/statistic/statistic.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { PaymentModule } from './modules/payment/payment.module';
     BookingModule,
     ReviewModule,
     PaymentModule,
+    StatisticModule,
   ],
   controllers: [],
   providers: [SeedOnBootstrapService],

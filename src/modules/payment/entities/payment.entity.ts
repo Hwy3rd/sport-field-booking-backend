@@ -61,6 +61,12 @@ export class Payment {
   @Column({ name: 'payment_info', type: 'text', nullable: true })
   paymentInfo?: string;
 
+  @Column({ name: 'refunded_amount', type: 'integer', default: 0 })
+  refundedAmount!: number;
+
+  @Column({ name: 'refund_info', type: 'text', nullable: true })
+  refundInfo?: string;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 

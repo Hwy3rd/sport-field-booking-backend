@@ -177,6 +177,7 @@ export class BookingService {
     const queryOptions = {
       rangeFields: ['createdAt'],
       omit: ['isDeleted'],
+      relations: ['items'],
     };
     return await filterQuery(this.bookingRepository, safeQuery, queryOptions);
   }
@@ -195,6 +196,7 @@ export class BookingService {
     const filterOptions: FilterQueryOptions<Booking> = {
       rangeFields: ['createdAt'],
       omit: ['isDeleted'],
+      relations: ['items'],
     };
     return await filterQuery(this.bookingRepository, safeQuery, filterOptions);
   }
@@ -202,7 +204,15 @@ export class BookingService {
   async findOne(user: { id: string; role?: string }, id: string) {
     const booking = await this.bookingRepository.findOne({
       where: { id, isDeleted: false },
-      relations: { items: true },
+      relations: {
+        items: {
+          timeSlot: {
+            court: {
+              venue: true,
+            },
+          },
+        },
+      },
     });
     if (!booking) throw new NotFoundException('Booking not found');
 
