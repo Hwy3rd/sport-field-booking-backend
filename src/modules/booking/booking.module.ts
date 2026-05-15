@@ -5,11 +5,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Booking } from './entities/booking.entity';
 import { BookingItem } from './entities/booking-item.entity';
 import { TimeSlotModule } from '../time-slot/time-slot.module';
+import { BookingCronService } from './booking-cron.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Booking, BookingItem]), TimeSlotModule],
   controllers: [BookingController],
-  providers: [BookingService],
+  providers: [BookingService, BookingCronService],
   exports: [BookingService, TypeOrmModule],
 })
 export class BookingModule {}

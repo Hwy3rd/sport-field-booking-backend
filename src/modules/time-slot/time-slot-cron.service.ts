@@ -25,7 +25,7 @@ export class TimeSlotCronService {
   async unlockExpiredTimeSlots() {
     this.logger.debug('Running unlockExpiredTimeSlots cron...');
     const expirationTime = new Date();
-    expirationTime.setMinutes(expirationTime.getMinutes() - 10); // 10 minutes
+    expirationTime.setMinutes(expirationTime.getMinutes() - 15); // 15 minutes
 
     const result = await this.timeSlotRepository.update(
       {

@@ -45,7 +45,7 @@ export class PaymentService {
     ipAddr: string,
     userId: string,
   ) {
-    const booking = await this.bookingService.findOne(userId, dto.bookingId);
+    const booking = await this.bookingService.findOne({ id: userId }, dto.bookingId);
 
     if (booking.status !== BOOKING_STATUS.PENDING) {
       throw new BadRequestException(
@@ -68,6 +68,15 @@ export class PaymentService {
     });
     await this.paymentRepository.save(payment);
 
+    const now = dayjs();
+    const expirationTime = dayjs(booking.createdAt).add(15, 'minute');
+
+    if (expirationTime.isBefore(now)) {
+      throw new BadRequestException(
+        'Thời gian thanh toán cho đơn hàng này đã hết hạn.',
+      );
+    }
+
     const serverUrl =
       this.configService.get<string>('SERVER_URL') || 'http://localhost:3100';
 
@@ -79,6 +88,12 @@ export class PaymentService {
       vnp_OrderType: ProductCode.Other,
       vnp_ReturnUrl: `${serverUrl}/api/payment/vnpay-return`, // Backend route handler
       vnp_Locale: VnpLocale.VN,
+      vnp_CreateDate: Number(
+        dayjs().tz('Asia/Ho_Chi_Minh').format('YYYYMMDDHHmmss'),
+      ),
+      vnp_ExpireDate: Number(
+        expirationTime.tz('Asia/Ho_Chi_Minh').format('YYYYMMDDHHmmss'),
+      ),
     });
 
     return urlString;

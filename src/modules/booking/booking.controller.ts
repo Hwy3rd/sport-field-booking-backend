@@ -53,8 +53,8 @@ export class BookingController {
   @Get(':id')
   @ApiOperation({ summary: 'Get a booking by id' })
   @ApiOkResponse({ type: BookingWithItemsResponseDto })
-  findOne(@GetUserId() userId: string, @Param('id') id: string) {
-    return this.bookingService.findOne(userId, id);
+  findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
+    return this.bookingService.findOne(req.user, id);
   }
 
   @Post()
