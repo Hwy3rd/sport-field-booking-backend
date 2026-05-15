@@ -58,4 +58,11 @@ export class CourtQueryDto extends FilterQueryDto {
   @IsInt()
   @Min(0)
   maxPrice?: number;
+
+  @ApiPropertyOptional({
+    description: 'Status to filter courts',
+  })
+  @IsOptional()
+  @IsString()
+  status?: string;
 }

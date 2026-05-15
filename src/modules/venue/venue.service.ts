@@ -40,7 +40,7 @@ export class VenueService {
         startTime,
         endTime,
         ownerId,
-        status,
+        status: status || 'ALL_ACTIVE',
       },
     };
 
@@ -48,7 +48,7 @@ export class VenueService {
       regexFields: ['name', 'address'],
       customHandlers: {
         status: (qb, value, alias) => {
-          if (value) {
+          if (value && value !== 'ALL_ACTIVE') {
             qb.andWhere(`${alias}.status = :targetStatus`, {
               targetStatus: String(value),
             });
@@ -127,10 +127,12 @@ export class VenueService {
   }
 
   async findAllByFilter(filterBody: FilterBodyDto) {
+    const { status, ...rest } = filterBody.filter ?? {};
     const safeFilterBody: FilterBodyDto = {
       ...filterBody,
       filter: {
-        ...(filterBody.filter ?? {}),
+        ...rest,
+        status: status || 'EXCLUDE_DELETED',
       },
     };
 
@@ -138,9 +140,15 @@ export class VenueService {
       regexFields: ['name', 'address'],
       customHandlers: {
         status: (qb, value, alias) => {
-          qb.andWhere(`${alias}.status != :excludedStatus`, {
-            excludedStatus: VENUE_STATUS.DELETED,
-          });
+          if (value && value !== 'EXCLUDE_DELETED') {
+            qb.andWhere(`${alias}.status = :targetStatus`, {
+              targetStatus: String(value),
+            });
+          } else {
+            qb.andWhere(`${alias}.status != :excludedStatus`, {
+              excludedStatus: VENUE_STATUS.DELETED,
+            });
+          }
         },
       },
     });

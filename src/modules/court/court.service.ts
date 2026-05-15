@@ -127,6 +127,7 @@ export class CourtService {
         sportId: query.sportId,
         venueId: query.venueId,
         pricePerHour: [query.minPrice ?? null, query.maxPrice ?? null],
+        status: query.status || 'EXCLUDE_DELETED',
       },
     };
 
@@ -135,9 +136,15 @@ export class CourtService {
       rangeFields: ['pricePerHour'],
       customHandlers: {
         status: (qb, value, alias) => {
-          qb.andWhere(`${alias}.status != :excludedStatus`, {
-            excludedStatus: COURT_STATUS.DELETED,
-          });
+          if (value && value !== 'EXCLUDE_DELETED') {
+            qb.andWhere(`${alias}.status = :targetStatus`, {
+              targetStatus: String(value),
+            });
+          } else {
+            qb.andWhere(`${alias}.status != :excludedStatus`, {
+              excludedStatus: COURT_STATUS.DELETED,
+            });
+          }
         },
       },
     });
