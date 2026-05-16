@@ -51,6 +51,7 @@ export class BookingController {
   }
 
   @Get(':id')
+  @Serialize(BookingWithItemsResponseDto)
   @ApiOperation({ summary: 'Get a booking by id' })
   @ApiOkResponse({ type: BookingWithItemsResponseDto })
   findOne(@Req() req: { user: AuthUser }, @Param('id') id: string) {
@@ -58,6 +59,7 @@ export class BookingController {
   }
 
   @Post()
+  @Serialize(BookingWithItemsResponseDto)
   @ApiOperation({ summary: 'Create a booking' })
   @ApiOkResponse({ type: BookingWithItemsResponseDto })
   create(

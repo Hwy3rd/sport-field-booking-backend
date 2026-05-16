@@ -40,12 +40,15 @@ export class VenueController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(USER_ROLE.ADMIN)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new venue' })
   @ApiOkResponse({ type: VenueResponseDto })
-  create(@Body() createVenueDto: CreateVenueDto) {
-    return this.venueService.create(createVenueDto);
+  create(
+    @Req() req: { user: AuthUser },
+    @Body() createVenueDto: CreateVenueDto,
+  ) {
+    return this.venueService.create(req.user, createVenueDto);
   }
 
   @Post('search')

@@ -307,36 +307,44 @@ export class PaymentService {
     // vnp_RequestId: alphanumeric thuần, tối đa 30 ký tự. Không được chứa dấu gạch dưới hoặc khoảng trắng.
     const vnp_RequestId = `REQ${dayjs().tz('Asia/Ho_Chi_Minh').format('YYYYMMDDHHmmss')}${Math.floor(10 + Math.random() * 89)}`;
 
-    const vnp_TransactionDate = Number(
-      dayjs(payment.payDate!).tz('Asia/Ho_Chi_Minh').format('YYYYMMDDHHmmss'),
-    );
-    const vnp_CreateDate = Number(
-      dayjs().tz('Asia/Ho_Chi_Minh').format('YYYYMMDDHHmmss'),
-    );
+    // Sử dụng định dạng String cho các tham số ngày tháng và TransactionNo để tránh lỗi định dạng JSON Number trong VNPay 2.1.0
+    const vnp_TransactionDate = dayjs(payment.payDate!)
+      .tz('Asia/Ho_Chi_Minh')
+      .format('YYYYMMDDHHmmss');
+
+    const vnp_CreateDate = dayjs().tz('Asia/Ho_Chi_Minh').format('YYYYMMDDHHmmss');
+
+    // Fix vnp_IpAddr nếu là localhost IPv6
+    const safeIp =
+      !ipAddr || ipAddr === '::1' || ipAddr === '127.0.0.1'
+        ? '127.0.0.1'
+        : ipAddr;
 
     // Đảm bảo vnp_CreateBy là ký tự ASCII thường, không khoảng trắng để tránh lỗi VNPay Validator
     const safeCreator = `User${(userName || userId).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
 
-    this.logger.log(
-      `Triggering VNPay Refund API. RequestId: ${vnp_RequestId}, TxnRef: ${payment.txnRef}, IP: ${ipAddr}, Creator: ${safeCreator}`,
-    );
+    // Đảm bảo vnp_TransactionNo là string
+    const vnp_TransactionNo = String(payment.transactionNo || '0');
+
+    const refundPayload = {
+      vnp_RequestId,
+      vnp_TransactionDate: vnp_TransactionDate as any,
+      vnp_IpAddr: safeIp,
+      vnp_TxnRef: payment.txnRef,
+      vnp_Amount: payment.amount,
+      vnp_OrderInfo: `Hoan tra booking ${booking.id.substring(0, 8)}`,
+      vnp_TransactionType: RefundTransactionType.FULL_REFUND,
+      vnp_CreateBy: safeCreator,
+      vnp_CreateDate: vnp_CreateDate as any,
+      vnp_TransactionNo: vnp_TransactionNo as any,
+    };
+
+    this.logger.log('VNPay Refund Payload to Lib:', JSON.stringify(refundPayload));
 
     try {
-      const refundResponse = await this.vnpayService.refund({
-        vnp_RequestId,
-        vnp_TransactionDate,
-        vnp_IpAddr: ipAddr,
-        vnp_TxnRef: payment.txnRef,
-        vnp_Amount: payment.amount,
-        // vnp_OrderInfo: Loại bỏ các kí tự đặc biệt như % và khoảng trắng phức tạp
-        vnp_OrderInfo: `Hoan tra booking ${booking.id.substring(0, 8)}`,
-        vnp_TransactionType: RefundTransactionType.FULL_REFUND,
-        vnp_CreateBy: safeCreator,
-        vnp_CreateDate,
-        vnp_TransactionNo: payment.transactionNo! as any, // Truyền string an toàn qua 'as any' để tránh lỗi làm tròn số lớn JS
-      });
+      const refundResponse = await this.vnpayService.refund(refundPayload);
 
-      this.logger.log('VNPay Refund raw response:', refundResponse);
+      this.logger.log('VNPay Refund raw response:', JSON.stringify(refundResponse));
 
       if (
         refundResponse.isSuccess &&

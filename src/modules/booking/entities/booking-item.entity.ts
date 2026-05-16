@@ -12,7 +12,6 @@ import { Booking } from './booking.entity';
 import { TimeSlot } from 'src/modules/time-slot/entities/time-slot.entity';
 
 @Entity('booking_items')
-@Index('UQ_booking_items_time_slot', ['timeSlotId'], { unique: true })
 export class BookingItem {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
