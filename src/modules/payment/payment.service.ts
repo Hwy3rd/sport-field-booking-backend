@@ -314,11 +314,21 @@ export class PaymentService {
 
     const vnp_CreateDate = dayjs().tz('Asia/Ho_Chi_Minh').format('YYYYMMDDHHmmss');
 
-    // Fix vnp_IpAddr nếu là localhost IPv6
-    const safeIp =
-      !ipAddr || ipAddr === '::1' || ipAddr === '127.0.0.1'
-        ? '127.0.0.1'
-        : ipAddr;
+    // Fix vnp_IpAddr: Lấy IP đầu tiên nếu là chuỗi nhiều IP (do qua Proxy) và xử lý format IPv6
+    let safeIp = ipAddr || '127.0.0.1';
+    if (safeIp.includes(',')) {
+      safeIp = safeIp.split(',')[0].trim();
+    }
+    if (safeIp.includes('::ffff:')) {
+      safeIp = safeIp.replace('::ffff:', '');
+    }
+    if (safeIp === '::1') {
+      safeIp = '127.0.0.1';
+    }
+    // Đảm bảo không quá dài (VNPay Refund API 2.1.0 thường yêu cầu IPv4 15 chars)
+    if (safeIp.length > 15 && safeIp.includes('.')) {
+      safeIp = safeIp.substring(0, 15);
+    }
 
     // Đảm bảo vnp_CreateBy là ký tự ASCII thường, không khoảng trắng để tránh lỗi VNPay Validator
     const safeCreator = `User${(userName || userId).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
