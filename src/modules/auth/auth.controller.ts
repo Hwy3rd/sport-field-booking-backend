@@ -64,7 +64,6 @@ export class AuthController {
   @Post('logout')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Logout' })
-  @UseGuards(JwtAuthGuard)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const isProduction = this.configService.get('NODE_ENV') === 'production';
     const refreshToken = req.cookies?.refreshToken;

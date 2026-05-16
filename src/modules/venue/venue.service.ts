@@ -137,6 +137,7 @@ export class VenueService {
     };
 
     return await filterQuery(this.venueRepository, safeFilterBody, {
+      relations: ['owner'],
       regexFields: ['name', 'address'],
       customHandlers: {
         status: (qb, value, alias) => {

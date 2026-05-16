@@ -253,9 +253,11 @@ export class StatisticService {
     };
   }
 
-  async getTopVenues() {
+  async getTopVenues(authUser: AuthUser) {
+    const isAdmin = authUser.role === USER_ROLE.ADMIN;
+
     // Aggregate top 5 venues with maximum successful booking revenue
-    const result = await this.bookingItemRepository
+    const qb = this.bookingItemRepository
       .createQueryBuilder('item')
       .innerJoin('item.booking', 'booking')
       .innerJoin(Court, 'court', 'court.id = item.courtId')
@@ -266,7 +268,13 @@ export class StatisticService {
       .where('booking.status IN (:...statuses)', {
         statuses: this.successfulStatuses,
       })
-      .andWhere('booking.isDeleted = false')
+      .andWhere('booking.isDeleted = false');
+
+    if (!isAdmin) {
+      qb.andWhere('venue.ownerId = :ownerId', { ownerId: authUser.id });
+    }
+
+    const result = await qb
       .groupBy('venue.name')
       .orderBy('revenue', 'DESC')
       .limit(5)

@@ -1,5 +1,6 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Expose, Type } from 'class-transformer';
+import { UserResponseDto } from '../../user/dto/user-response.dto';
 import {
   VENUE_STATUS_VALUES,
   type VenueStatus,
@@ -39,6 +40,14 @@ export class VenueResponseDto extends BaseVenueDto {
     example: '2026-04-22T10:00:00.000Z',
   })
   updatedAt!: Date;
+
+  @Expose()
+  @Type(() => UserResponseDto)
+  @ApiPropertyOptional({
+    description: 'Owner details',
+    type: () => UserResponseDto,
+  })
+  owner?: UserResponseDto;
 }
 
 export class FilteredVenueResponseDto extends FilteredDataResponseDto {

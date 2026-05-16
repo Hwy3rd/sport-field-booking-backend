@@ -72,11 +72,15 @@ export class CourtService {
     }
   }
 
-  async create(createCourtDto: CreateCourtDto) {
+  async create(authUser: AuthUser, createCourtDto: CreateCourtDto) {
     const venue = await this.venueService.findOneActiveById(
       createCourtDto.venueId,
     );
     if (!venue) throw new NotFoundException('Venue not found');
+
+    if (authUser.role === USER_ROLE.OWNER && venue.ownerId !== authUser.id) {
+      throw new ForbiddenException('You can only create courts for your own venues');
+    }
 
     const sport = await this.sportService.findOneActiveById(
       createCourtDto.sportId,
@@ -288,12 +292,21 @@ export class CourtService {
     return updatedCourt;
   }
 
-  async remove(id: string) {
+  async remove(authUser: AuthUser, id: string) {
     const existingCourt = await this.courtRepository.findOne({
       where: { id, status: Not(COURT_STATUS.DELETED) },
-      select: ['id', 'status'],
+      relations: { venue: true },
     });
     if (!existingCourt) throw new NotFoundException('Court not found');
+
+    if (
+      authUser.role === USER_ROLE.OWNER &&
+      existingCourt.venue.ownerId !== authUser.id
+    ) {
+      throw new ForbiddenException(
+        'You can only delete courts in your own venue',
+      );
+    }
 
     existingCourt.status = COURT_STATUS.DELETED;
     await this.courtRepository.save(existingCourt);
@@ -301,10 +314,24 @@ export class CourtService {
     return { id };
   }
 
-  async bulkDelete(ids: BulkDeleteDto) {
+  async bulkDelete(authUser: AuthUser, ids: BulkDeleteDto) {
     const uniqueIds = [...new Set(ids.ids)];
     if (uniqueIds.length === 0)
       throw new BadRequestException('No court ids provided');
+
+    const courts = await this.courtRepository.find({
+      where: { id: In(uniqueIds), status: Not(COURT_STATUS.DELETED) },
+      relations: { venue: true },
+    });
+
+    if (authUser.role === USER_ROLE.OWNER) {
+      const allOwned = courts.every((c) => c.venue.ownerId === authUser.id);
+      if (!allOwned) {
+        throw new ForbiddenException(
+          'You can only delete courts in your own venue',
+        );
+      }
+    }
 
     const result = await this.courtRepository.update(
       {

@@ -77,9 +77,9 @@ export class TimeSlotController {
 
   @Post('bulk-delete')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(USER_ROLE.ADMIN)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin delete multiple time slots' })
+  @ApiOperation({ summary: 'Delete multiple time slots' })
   bulkDelete(@Req() req: Request, @Body() ids: BulkDeleteDto) {
     return this.timeSlotService.bulkDelete(req.user as AuthUser, ids);
   }

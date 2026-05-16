@@ -43,10 +43,10 @@ export class StatisticController {
   }
 
   @Get('top-venues')
-  @Roles(USER_ROLE.ADMIN)
-  @ApiOperation({ summary: 'Get top 5 venues by platform revenue (Admin only)' })
-  getTopVenues() {
-    return this.statisticService.getTopVenues();
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
+  @ApiOperation({ summary: 'Get top 5 venues by platform revenue (Admin/Owner)' })
+  getTopVenues(@Req() req: { user: AuthUser }) {
+    return this.statisticService.getTopVenues(req.user);
   }
 
   @Get('user-growth')

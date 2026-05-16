@@ -52,12 +52,12 @@ export class CourtController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(USER_ROLE.ADMIN)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new court' })
   @ApiOkResponse({ type: CourtResponseDto })
-  create(@Body() createCourtDto: CreateCourtDto) {
-    return this.courtService.create(createCourtDto);
+  create(@Req() req: { user: AuthUser }, @Body() createCourtDto: CreateCourtDto) {
+    return this.courtService.create(req.user, createCourtDto);
   }
 
   @Patch(':id')
@@ -76,19 +76,19 @@ export class CourtController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(USER_ROLE.ADMIN)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a court' })
-  remove(@Param('id') id: string) {
-    return this.courtService.remove(id);
+  remove(@Req() req: { user: AuthUser }, @Param('id') id: string) {
+    return this.courtService.remove(req.user, id);
   }
 
   @Post('bulk-delete')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(USER_ROLE.ADMIN)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Admin delete multiple courts' })
-  bulkDelete(@Body() ids: BulkDeleteDto) {
-    return this.courtService.bulkDelete(ids);
+  @ApiOperation({ summary: 'Delete multiple courts' })
+  bulkDelete(@Req() req: { user: AuthUser }, @Body() ids: BulkDeleteDto) {
+    return this.courtService.bulkDelete(req.user, ids);
   }
 }
