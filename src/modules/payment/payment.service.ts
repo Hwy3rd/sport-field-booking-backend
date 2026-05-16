@@ -12,6 +12,7 @@ import {
   PAYMENT_METHOD,
   PAYMENT_STATUS,
 } from 'src/libs/constants/payment.constant';
+import { USER_ROLE } from 'src/libs/constants/user.constant';
 import { BookingService } from 'src/modules/booking/booking.service';
 import { Booking } from 'src/modules/booking/entities/booking.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -22,6 +23,7 @@ import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 
 dayjs.extend(customParseFormat);
 dayjs.extend(utc);
@@ -242,15 +244,11 @@ export class PaymentService {
   }
 
   async refundBooking(
-    userId: string,
+    authUser: AuthUser,
     bookingId: string,
     ipAddr: string,
-    userName: string,
   ) {
-    const booking = await this.bookingService.findOne(
-      { id: userId },
-      bookingId,
-    );
+    const booking = await this.bookingService.findOne(authUser, bookingId);
 
     if (booking.status !== BOOKING_STATUS.CONFIRMED) {
       throw new BadRequestException(
@@ -281,7 +279,10 @@ export class PaymentService {
 
     if (minPlayTime) {
       const diffHours = minPlayTime.diff(now, 'hour', true);
-      if (diffHours < 24) {
+      const isPowerUser = [USER_ROLE.ADMIN, USER_ROLE.OWNER].includes(
+        authUser.role as any,
+      );
+      if (diffHours < 24 && !isPowerUser) {
         throw new BadRequestException(
           `Chỉ cho phép hoàn tiền trước giờ chơi tối thiểu 24 tiếng. Trận đấu sớm nhất của bạn bắt đầu vào ${minPlayTime.format('DD/MM/YYYY HH:mm')}.`,
         );
@@ -331,7 +332,7 @@ export class PaymentService {
     }
 
     // Đảm bảo vnp_CreateBy là ký tự ASCII thường, không khoảng trắng để tránh lỗi VNPay Validator
-    const safeCreator = `User${(userName || userId).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
+    const safeCreator = `User${(authUser.username || authUser.id).replace(/[^a-zA-Z0-9]/g, '').substring(0, 16)}`;
 
     // Đảm bảo vnp_TransactionNo là string
     const vnp_TransactionNo = String(payment.transactionNo || '0');

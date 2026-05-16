@@ -89,8 +89,8 @@ export class BookingController {
   @Patch(':id/cancel')
   @ApiOperation({ summary: 'Cancel a booking' })
   @ApiOkResponse({ type: BookingResponseDto })
-  cancel(@GetUserId() userId: string, @Param('id') id: string) {
-    return this.bookingService.cancelBooking(userId, id);
+  cancel(@Req() req: { user: AuthUser }, @Param('id') id: string) {
+    return this.bookingService.cancelBooking(req.user, id);
   }
 
   @Delete(':id')

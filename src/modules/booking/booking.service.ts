@@ -251,16 +251,12 @@ export class BookingService {
     return updated;
   }
 
-  async cancelBooking(userId: string, id: string) {
-    const booking = await this.bookingRepository.findOne({
-      where: { id, isDeleted: false },
-      relations: { items: true },
-    });
-    if (!booking) throw new NotFoundException('Booking not found');
-    if (booking.userId !== userId)
-      throw new ForbiddenException(
-        'You are not allowed to cancel this booking',
-      );
+  async cancelBooking(user: AuthUser, id: string) {
+    const booking = await this.findOne(user, id);
+
+    if (booking.status === BOOKING_STATUS.CANCELLED) {
+      throw new BadRequestException('Booking is already cancelled');
+    }
 
     const updatedBooking = await this.update(id, {
       status: BOOKING_STATUS.CANCELLED,

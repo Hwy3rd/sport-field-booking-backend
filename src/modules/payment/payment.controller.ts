@@ -96,10 +96,9 @@ export class PaymentController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post('booking/:bookingId/refund')
-  @ApiOperation({ summary: 'Request 100% VNPay refund for a confirmed booking' })
+  @ApiOperation({ summary: 'Refund a booking' })
   async refundBooking(
-    @Req() req: Request,
-    @GetUserId() userId: string,
+    @Req() req: any,
     @Param('bookingId') bookingId: string,
   ) {
     let ipAddr =
@@ -113,10 +112,9 @@ export class PaymentController {
     }
 
     return await this.paymentService.refundBooking(
-      userId,
+      req.user,
       bookingId,
       ipAddr,
-      userId,
     );
   }
 }

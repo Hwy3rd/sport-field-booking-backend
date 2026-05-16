@@ -13,6 +13,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const port = Number(configService.get<string>('PORT') ?? 3000);
   const clientUrl = configService.get<string>('CLIENT_URL');
+  console.log('>>> DEBUG: clientUrl =', clientUrl);
 
   app.setGlobalPrefix('api');
 
