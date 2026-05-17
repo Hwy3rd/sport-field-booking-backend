@@ -43,6 +43,32 @@ export class TimeSlotTemplateService {
       if (query.courtId) qb.andWhere('template.courtId = :courtId', { courtId: query.courtId });
       if (query.name) qb.andWhere('template.name ILIKE :name', { name: `%${query.name}%` });
       if (query.weekday) qb.andWhere('template.weekday = :weekday', { weekday: query.weekday });
+
+      if (query.status && query.status !== 'all') {
+        const isActive = query.status === 'active';
+        qb.andWhere('template.isActive = :isActive', { isActive });
+      }
+
+      if (query.minPrice !== undefined && query.minPrice !== null) {
+        qb.andWhere('template.price >= :minPrice', { minPrice: query.minPrice });
+      }
+      if (query.maxPrice !== undefined && query.maxPrice !== null) {
+        qb.andWhere('template.price <= :maxPrice', { maxPrice: query.maxPrice });
+      }
+
+      if (query.weekdays) {
+        const weekdayList = query.weekdays.split(',').map((w) => Number(w.trim())).filter((w) => !isNaN(w));
+        if (weekdayList.length > 0) {
+          qb.andWhere('template.weekday IN (:...weekdayList)', { weekdayList });
+        }
+      }
+
+      if (query.startTime && query.endTime) {
+        qb.andWhere('template.startTime < :filterEndTime AND template.endTime > :filterStartTime', {
+          filterStartTime: query.startTime,
+          filterEndTime: query.endTime,
+        });
+      }
     };
 
     // 1. Query distinct logical template groups

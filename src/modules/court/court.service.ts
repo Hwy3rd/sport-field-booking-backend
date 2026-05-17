@@ -132,12 +132,13 @@ export class CourtService {
         venueId: query.venueId,
         pricePerHour: [query.minPrice ?? null, query.maxPrice ?? null],
         status: query.status || 'EXCLUDE_DELETED',
+        createdAt: query.startDate || query.endDate ? [query.startDate ?? null, query.endDate ?? null] : undefined,
       },
     };
 
     const result = await filterQuery(this.courtRepository, safeQuery, {
       regexFields: ['name'],
-      rangeFields: ['pricePerHour'],
+      rangeFields: ['pricePerHour', 'createdAt'],
       customHandlers: {
         status: (qb, value, alias) => {
           if (value && value !== 'EXCLUDE_DELETED') {

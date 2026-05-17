@@ -10,11 +10,20 @@ import { In, Not, Repository } from 'typeorm';
 import { Sport } from './entities/sport.entity';
 import { SportDto } from './dto/sport.dto';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
+import { Court } from '../court/entities/court.entity';
+import { TimeSlot } from '../time-slot/entities/time-slot.entity';
+import { COURT_STATUS } from 'src/libs/constants/court.constant';
+import { TIME_SLOT_STATUS } from 'src/libs/constants/time-slot.constant';
 
 @Injectable()
 export class SportService {
   constructor(
-    @InjectRepository(Sport) private sportRepository: Repository<Sport>,
+    @InjectRepository(Sport)
+    private readonly sportRepository: Repository<Sport>,
+    @InjectRepository(Court)
+    private readonly courtRepository: Repository<Court>,
+    @InjectRepository(TimeSlot)
+    private readonly timeSlotRepository: Repository<TimeSlot>,
   ) {}
 
   async findAll(query: SportQueryDto) {
@@ -90,6 +99,23 @@ export class SportService {
     }
     existingSport.isDeleted = true;
     await this.sportRepository.save(existingSport);
+
+    const courts = await this.courtRepository.find({
+      where: { sportId: id, status: Not(COURT_STATUS.DELETED) },
+      select: ['id'],
+    });
+    const courtIds = courts.map((c) => c.id);
+    if (courtIds.length > 0) {
+      await this.courtRepository.update(
+        { id: In(courtIds) },
+        { status: COURT_STATUS.DELETED },
+      );
+      await this.timeSlotRepository.update(
+        { courtId: In(courtIds), status: TIME_SLOT_STATUS.AVAILABLE },
+        { status: TIME_SLOT_STATUS.BLOCKED },
+      );
+    }
+
     return {
       id,
     };
@@ -107,6 +133,23 @@ export class SportService {
       },
       { isDeleted: true },
     );
+
+    const courts = await this.courtRepository.find({
+      where: { sportId: In(uniqueIds), status: Not(COURT_STATUS.DELETED) },
+      select: ['id'],
+    });
+    const courtIds = courts.map((c) => c.id);
+    if (courtIds.length > 0) {
+      await this.courtRepository.update(
+        { id: In(courtIds) },
+        { status: COURT_STATUS.DELETED },
+      );
+      await this.timeSlotRepository.update(
+        { courtId: In(courtIds), status: TIME_SLOT_STATUS.AVAILABLE },
+        { status: TIME_SLOT_STATUS.BLOCKED },
+      );
+    }
+
     return {
       ids: uniqueIds,
       deletedCount: result.affected ?? 0,

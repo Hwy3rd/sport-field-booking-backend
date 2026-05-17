@@ -65,4 +65,20 @@ export class CourtQueryDto extends FilterQueryDto {
   @IsOptional()
   @IsString()
   status?: string;
+
+  @ApiPropertyOptional({
+    description: 'Start date of court creation time range',
+  })
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @ApiPropertyOptional({
+    description: 'End date of court creation time range',
+  })
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsOptional()
+  @IsString()
+  endDate?: string;
 }

@@ -44,4 +44,34 @@ export class TimeSlotQueryDto extends FilterQueryDto {
   @Type(() => String)
   @IsIn(TIME_SLOT_STATUS_VALUES)
   status?: TimeSlotStatus;
+
+  @ApiPropertyOptional({ description: 'Filter by venue id', format: 'uuid' })
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsOptional()
+  @IsUUID()
+  venueId?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by start date', example: '2026-05-01' })
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by end date', example: '2026-05-07' })
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by min price' })
+  @Transform(({ value }) => (value === '' ? undefined : Number(value)))
+  @IsOptional()
+  @Type(() => Number)
+  minPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by max price' })
+  @Transform(({ value }) => (value === '' ? undefined : Number(value)))
+  @IsOptional()
+  @Type(() => Number)
+  maxPrice?: number;
 }

@@ -14,6 +14,7 @@ import { TimeSlotTemplate } from './entities/time-slot-template.entity';
 import { CreateManualSlotDto } from '../court/dto/create-manual-slot.dto';
 import { In, Repository } from 'typeorm';
 import { TIME_SLOT_STATUS } from 'src/libs/constants/time-slot.constant';
+import { COURT_STATUS } from 'src/libs/constants/court.constant';
 import { filterQuery } from 'src/libs/helpers/filter-query.helper';
 import { TimeSlotQueryDto } from './dto/time-slot-query.dto';
 import { BulkDeleteDto } from 'src/libs/dtos/bulk-delete.dto';
@@ -148,19 +149,49 @@ export class TimeSlotService {
   }
 
   async findAll(query: TimeSlotQueryDto) {
+    const filter: Record<string, any> = {
+      courtId: query.courtId,
+      templateId: query.templateId,
+      status: query.status,
+    };
+
+    if (query.date) {
+      filter.date = query.date;
+    } else if (query.startDate || query.endDate) {
+      filter.date = [query.startDate ?? null, query.endDate ?? null];
+    }
+
+    if (query.minPrice !== undefined || query.maxPrice !== undefined) {
+      filter.price = [query.minPrice ?? null, query.maxPrice ?? null];
+    }
+
+    if (query.venueId) {
+      filter.venueId = query.venueId;
+    }
+
     const filterData = {
       current: query.current,
       limit: query.limit,
-      filter: {
-        courtId: query.courtId,
-        templateId: query.templateId,
-        date: query.date,
-        status: query.status,
-      },
+      filter,
     };
 
     const result = await filterQuery(this.timeSlotRepository, filterData, {
       sort: { field: 'date', order: 'ASC' },
+      rangeFields: ['date', 'price'],
+      customHandlers: {
+        venueId: (qb, value, alias) => {
+          if (value) {
+            qb.andWhere(
+              `"${alias}"."court_id" IN (
+                SELECT "id"
+                FROM "courts"
+                WHERE "venue_id" = :venueIdValue
+              )`,
+              { venueIdValue: value },
+            );
+          }
+        },
+      },
     });
 
     const items = result.items ?? [];
@@ -200,7 +231,24 @@ export class TimeSlotService {
 
   async updateStatusByIds(ids: string[], status: TimeSlotStatus) {
     if (ids.length === 0) return;
-    await this.timeSlotRepository.update({ id: In(ids) }, { status });
+    if (status === TIME_SLOT_STATUS.AVAILABLE) {
+      await this.timeSlotRepository
+        .createQueryBuilder()
+        .update(TimeSlot)
+        .set({ status })
+        .where('id IN (:...ids)', { ids })
+        .andWhere(
+          `"court_id" IN (
+            SELECT "id"
+            FROM "courts"
+            WHERE "status" != :courtDeletedStatus
+          )`,
+          { courtDeletedStatus: COURT_STATUS.DELETED },
+        )
+        .execute();
+    } else {
+      await this.timeSlotRepository.update({ id: In(ids) }, { status });
+    }
   }
 
   async blockAvailableByCourtIds(courtIds: string[]) {

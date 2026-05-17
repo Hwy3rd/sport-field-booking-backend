@@ -31,4 +31,34 @@ export class TimeSlotTemplateQueryDto extends FilterQueryDto {
   @Type(() => Number)
   @IsIn(TIME_SLOT_WEEKDAY_VALUES)
   weekday?: TimeSlotWeekday;
+
+  @ApiPropertyOptional({ description: 'Filter by template active status' })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by min price' })
+  @IsOptional()
+  @Type(() => Number)
+  minPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by max price' })
+  @IsOptional()
+  @Type(() => Number)
+  maxPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Filter by weekdays (comma-separated like 1,2,5)' })
+  @IsOptional()
+  @IsString()
+  weekdays?: string;
+
+  @ApiPropertyOptional({ description: 'Filter overlap start time' })
+  @IsOptional()
+  @IsString()
+  startTime?: string;
+
+  @ApiPropertyOptional({ description: 'Filter overlap end time' })
+  @IsOptional()
+  @IsString()
+  endTime?: string;
 }

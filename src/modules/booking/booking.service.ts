@@ -165,20 +165,42 @@ export class BookingService {
     );
   }
 
-  async findAllByFilter(query: FilterBodyDto, userId?: string) {
+  async findAllByFilter(query: FilterBodyDto, authUser?: AuthUser) {
     const safeQuery = {
       current: query.current,
       limit: query.limit,
       filter: {
         ...query.filter,
         isDeleted: false,
-      },
+      } as Record<string, any>,
     };
-    const queryOptions = {
-      rangeFields: ['createdAt'],
+
+    const queryOptions: FilterQueryOptions<Booking> = {
+      rangeFields: ['createdAt', 'totalPrice'],
       omit: ['isDeleted'],
-      relations: ['items'],
+      relations: ['items', 'user'],
     };
+
+    if (authUser && authUser.role === USER_ROLE.OWNER) {
+      queryOptions.customHandlers = {
+        ...queryOptions.customHandlers,
+        ownerFilter: (qb, _, alias) => {
+          qb.andWhere(
+            `EXISTS (
+              SELECT 1 FROM "booking_items" "item"
+              INNER JOIN "courts" "court" ON "court"."id" = "item"."court_id"
+              INNER JOIN "venues" "venue" ON "venue"."id" = "court"."venue_id"
+              WHERE "item"."booking_id" = "${alias}"."id"
+              AND "venue"."owner_id" = :ownerIdValue
+            )`,
+            { ownerIdValue: authUser.id },
+          );
+        },
+      };
+      // Trigger the custom handler
+      safeQuery.filter.ownerFilter = true;
+    }
+
     return await filterQuery(this.bookingRepository, safeQuery, queryOptions);
   }
 
@@ -194,7 +216,7 @@ export class BookingService {
       },
     };
     const filterOptions: FilterQueryOptions<Booking> = {
-      rangeFields: ['createdAt'],
+      rangeFields: ['createdAt', 'totalPrice'],
       omit: ['isDeleted'],
       relations: ['items'],
     };
@@ -205,6 +227,7 @@ export class BookingService {
     const booking = await this.bookingRepository.findOne({
       where: { id, isDeleted: false },
       relations: {
+        user: true,
         items: {
           timeSlot: {
             court: {

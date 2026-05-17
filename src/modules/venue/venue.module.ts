@@ -3,11 +3,12 @@ import { VenueService } from './venue.service';
 import { VenueController } from './venue.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Venue } from './entities/venue.entity';
+import { Court } from '../court/entities/court.entity';
 import { TimeSlotModule } from '../time-slot/time-slot.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Venue]),
+    TypeOrmModule.forFeature([Venue, Court]),
     forwardRef(() => TimeSlotModule),
   ],
   controllers: [VenueController],

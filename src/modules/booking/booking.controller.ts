@@ -70,12 +70,15 @@ export class BookingController {
   }
 
   @Post('search')
-  @Roles(USER_ROLE.ADMIN)
+  @Roles(USER_ROLE.ADMIN, USER_ROLE.OWNER)
   @Serialize(FilteredBookingResponseDto)
-  @ApiOperation({ summary: 'Admin search bookings' })
+  @ApiOperation({ summary: 'Search bookings' })
   @ApiOkResponse({ type: [FilteredBookingResponseDto] })
-  findAll(@Body() filterBodyDto: FilterBodyDto) {
-    return this.bookingService.findAllByFilter(filterBodyDto);
+  findAll(
+    @Req() req: { user: AuthUser },
+    @Body() filterBodyDto: FilterBodyDto,
+  ) {
+    return this.bookingService.findAllByFilter(filterBodyDto, req.user);
   }
 
   @Patch(':id')

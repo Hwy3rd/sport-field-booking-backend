@@ -19,12 +19,16 @@ import type { AuthUser } from 'src/libs/types/jwt-payload.type';
 import { USER_ROLE } from 'src/libs/constants/user.constant';
 import { TimeSlotService } from '../time-slot/time-slot.service';
 import { VenueQueryDto } from './dto/venue-query.dto';
+import { Court } from '../court/entities/court.entity';
+import { COURT_STATUS } from 'src/libs/constants/court.constant';
 
 @Injectable()
 export class VenueService {
   constructor(
     @InjectRepository(Venue)
     private readonly venueRepository: Repository<Venue>,
+    @InjectRepository(Court)
+    private readonly courtRepository: Repository<Court>,
     @Inject(forwardRef(() => TimeSlotService))
     private readonly timeSlotService: TimeSlotService,
   ) {}
@@ -200,6 +204,10 @@ export class VenueService {
 
     existingVenue.status = VENUE_STATUS.DELETED;
     await this.venueRepository.save(existingVenue);
+    await this.courtRepository.update(
+      { venueId: existingVenue.id, status: Not(COURT_STATUS.DELETED) },
+      { status: COURT_STATUS.DELETED },
+    );
     await this.timeSlotService.blockAvailableByVenueIds([existingVenue.id]);
     return { id };
   }
@@ -215,6 +223,10 @@ export class VenueService {
         status: Not(VENUE_STATUS.DELETED),
       },
       { status: VENUE_STATUS.DELETED },
+    );
+    await this.courtRepository.update(
+      { venueId: In(uniqueIds), status: Not(COURT_STATUS.DELETED) },
+      { status: COURT_STATUS.DELETED },
     );
     await this.timeSlotService.blockAvailableByVenueIds(uniqueIds);
 

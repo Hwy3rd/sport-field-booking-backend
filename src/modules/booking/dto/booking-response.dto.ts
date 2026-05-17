@@ -6,7 +6,61 @@ import {
 } from 'src/libs/constants/booking.constant';
 import { FilteredDataResponseDto } from 'src/libs/dtos/filtered-data-response.dto';
 
+export class VenueInCourtDto {
+  @Expose()
+  @ApiProperty({ example: 'Sân bóng ABC' })
+  name!: string;
+}
+
+export class CourtInTimeSlotDto {
+  @Expose()
+  @ApiProperty({ example: 'Sân 1' })
+  name!: string;
+
+  @Expose()
+  @Type(() => VenueInCourtDto)
+  @ApiProperty({ type: VenueInCourtDto })
+  venue!: VenueInCourtDto;
+}
+
+export class TimeSlotInBookingItemDto {
+  @Expose()
+  @ApiProperty({ example: 'd8fb4022-a6f4-4a96-a4fb-a57f4da5dd7b' })
+  id!: string;
+
+  @Expose()
+  @Type(() => CourtInTimeSlotDto)
+  @ApiProperty({ type: CourtInTimeSlotDto })
+  court!: CourtInTimeSlotDto;
+}
+
+export class UserInBookingDto {
+  @Expose()
+  @ApiProperty({ example: 'd94b11fc-18bb-4c29-aa26-7d4a3f7aeef6' })
+  id!: string;
+
+  @Expose()
+  @ApiProperty({ example: 'user123' })
+  username!: string;
+
+  @Expose()
+  @ApiProperty({ example: 'user@example.com' })
+  email!: string;
+
+  @Expose()
+  @ApiProperty({ example: 'Nguyễn Văn A' })
+  fullName!: string;
+
+  @Expose()
+  @ApiProperty({ example: '0987654321', nullable: true })
+  phone!: string | null;
+}
+
 export class BookingItemResponseDto {
+  @Expose()
+  @Type(() => TimeSlotInBookingItemDto)
+  @ApiProperty({ type: TimeSlotInBookingItemDto, nullable: true })
+  timeSlot!: TimeSlotInBookingItemDto | null;
   @Expose()
   @ApiProperty({
     description: 'Booking item id',
@@ -79,6 +133,11 @@ export class BookingResponseDto {
     example: 'd94b11fc-18bb-4c29-aa26-7d4a3f7aeef6',
   })
   userId!: string;
+
+  @Expose()
+  @Type(() => UserInBookingDto)
+  @ApiProperty({ type: UserInBookingDto, nullable: true })
+  user?: UserInBookingDto;
 
   @Expose()
   @ApiProperty({
